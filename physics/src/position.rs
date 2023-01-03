@@ -1,8 +1,7 @@
 use core::ops;
 use linalg::Vector;
 
-pub trait Distance<T> {}
-
+pub type Distance<T> = Vector<T, 3>;
 type Coordinates<T> = Vector<T, 3>;
 
 pub struct Position<T> {
@@ -12,7 +11,7 @@ pub struct Position<T> {
 impl<T> Position<T>
     where T: Default + Copy + ops::Sub<Output = T>
 {
-    pub fn direction(&self, other: &Position<T>) -> Coordinates<T> {
+    pub fn direction(&self, other: &Position<T>) -> Distance<T> {
         other.coords - self.coords
     }
 }
