@@ -3,4 +3,4 @@ use core::ops::{Add, Sub, Div, Mul};
 use core::cmp::{Eq, Ord};
 
 pub trait Mobile: Copy {}
-pub trait Divisible: Eq + Ord + Add<Output = Self> + Sub<Output = Self> + Div<Output = Self> + Mul<Output = Self> + Sized {}
+pub trait Divisible: Eq + Ord + Add + Sub + Div + Mul + Sized {}

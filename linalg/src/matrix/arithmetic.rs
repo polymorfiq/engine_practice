@@ -33,6 +33,16 @@ impl <T, const M: usize, const N: usize> ops::Mul<T> for Matrix<T, M, N>
     }
 }
 
+impl <T, const M: usize, const N: usize> ops::Mul<Self> for Matrix<T, M, N>
+    where T: Default + Copy + ops::Mul<Output = T>
+{
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        gen_matrix(|m, n| *self.value_at(m, n) * *other.value_at(m, n))
+    }
+}
+
 impl <T, const M: usize, const N: usize> ops::Div<T> for Matrix<T, M, N>
     where T: Default + Copy + ops::Div<Output = T>
 {
@@ -40,5 +50,15 @@ impl <T, const M: usize, const N: usize> ops::Div<T> for Matrix<T, M, N>
 
     fn div(self, other: T) -> Self {
         gen_matrix(|m, n| *self.value_at(m, n) / other)
+    }
+}
+
+impl <T, const M: usize, const N: usize> ops::Div<Self> for Matrix<T, M, N>
+    where T: Default + Copy + ops::Div<Output = T>
+{
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        gen_matrix(|m, n| *self.value_at(m, n) / *other.value_at(m, n))
     }
 }
