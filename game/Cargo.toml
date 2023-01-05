@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-linalg = { path = "../linalg" }
-physics = { path = "../physics" }
+linalg = { path = "../linalg", version = "0.1.0" }
+physics = { path = "../physics", version = "0.1.0" }
