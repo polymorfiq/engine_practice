@@ -1,5 +1,5 @@
 mod space;
-pub use space::{Space, Point};
+pub use space::{Space, Point, Displacement, Area};
 
 mod time;
 pub use time::Time;

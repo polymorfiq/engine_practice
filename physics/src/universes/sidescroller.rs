@@ -1,6 +1,7 @@
 use crate::Universe;
 use crate::units::{space, time, mass};
 
+/// TODO: A basic, 2D Sidescroller universe
 pub struct D2Basic {}
 
 impl Universe<2, space::Meters2, time::Seconds, mass::Kilograms> for D2Basic {

@@ -1,5 +1,6 @@
 use crate::{Mass, Space, Time};
 
+/// A particular `Mass` moving through a `Space` and `Time`
 pub trait Body<'a, const D: usize, S: Space<D>, M: Mass, T: Time> {
     fn boundary(&self) -> S;
     fn distance(&self, other: &'a dyn Body<'a, D, S, M, T>) -> S;
