@@ -1,6 +1,7 @@
 use super::{Divisible, Mobile};
 
 /// `Space` is the fundamental dimension of Position, Distance, Direction, and Area
+/// 
 /// `Space` contains `Mass`, and is itself moving through `Time`.
 pub trait Space<const D: usize>: Mobile + Divisible {}
 
