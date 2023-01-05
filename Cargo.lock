@@ -3,11 +3,18 @@
 version = 3
 
 [[package]]
+name = "engines"
+version = "0.1.0"
+dependencies = [
+ "physics",
+]
+
+[[package]]
 name = "game"
 version = "0.1.0"
 dependencies = [
+ "engines",
  "linalg",
- "physics",
 ]
 
 [[package]]
@@ -16,7 +23,7 @@ version = "0.1.0"
 
 [[package]]
 name = "physics"
-version = "0.1.1"
+version = "0.1.3"
 dependencies = [
  "linalg",
 ]

@@ -4,7 +4,9 @@ use crate::Space;
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Meters(i64);
 pub fn meters(x: i64) -> Meters { Meters(x) }
-impl Space<1> for Meters {}
+impl Space for Meters {
+    const D: usize = 1;
+}
 
 // Required traits for Meters -> Space
 impl crate::Divisible for Meters {}
@@ -32,7 +34,9 @@ impl core::ops::Mul for Meters {
 #[derive(Copy, Clone)]
 pub struct Meters2(Matrix<Meters, 1, 2>);
 pub fn meters2(x: i64, y: i64) -> Meters2 { Meters2(matrix([[Meters(x), Meters(y)]])) }
-impl Space<2> for Meters2 {}
+impl Space for Meters2 {
+    const D: usize = 2;
+}
 
 // Required traits for Meters2 -> Space
 impl crate::Divisible for Meters2 {}
@@ -76,7 +80,9 @@ impl core::cmp::PartialEq for Meters2 {
 #[derive(Copy, Clone)]
 pub struct Meters3(Matrix<Meters, 1, 3>);
 pub fn meters3(x: i64, y: i64, z: i64) -> Meters3 { Meters3(matrix([[Meters(x), Meters(y), Meters(z)]])) }
-impl Space<3> for Meters3 {}
+impl Space for Meters3 {
+    const D: usize = 3;
+}
 
 // Required traits for Meters3 -> Space
 impl crate::Divisible for Meters3 {}

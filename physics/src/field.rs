@@ -1,6 +1,8 @@
-use crate::{Body, Force, Mass, Space, Time};
+use crate::{Area, Body, Force, Universe};
 
 /// A (potentially mass-less) source of `Force` within a set `Space`
-pub trait Field<const D: usize>: Space<D> {
-    fn force<S: Space<D>, M: Mass, T: Time>(&self, b: dyn Body<D, S, M, T>) -> &dyn Force<D, M, Self, T>;
+pub trait Field<U: Universe>: Area<U::S> {
+    type F: Force<U>;
+
+    fn force(&self, body: dyn Body<U>) -> &dyn Force<U>;
 }
