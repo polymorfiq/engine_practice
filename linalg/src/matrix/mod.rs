@@ -2,7 +2,7 @@ mod arithmetic;
 mod products;
 mod constructors;
 
-pub use constructors::{matrix, gen_matrix};
+use constructors::gen_matrix;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Matrix<T, const M: usize, const N: usize> {
@@ -10,15 +10,15 @@ pub struct Matrix<T, const M: usize, const N: usize> {
 }
 
 impl <T, const M: usize, const N: usize> Matrix<T, M, N> {
+    pub fn new(data: [[T; N]; M]) -> Self {
+        Self { data: data }
+    }
+
     pub fn rows(&self) -> usize { M }
     pub fn cols(&self) -> usize { N }
 
     pub fn value_at(&self, m: usize, n: usize) -> &T {
         &self.data[m][n]
-    }
-
-    pub fn raw(&self) -> &[[T; N]; M] {
-        &self.data
     }
 }
 

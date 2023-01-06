@@ -1,5 +1,4 @@
 use core::marker::Copy;
-use core::ops::{Add, Sub, Div, Mul};
 use core::cmp::{Eq, Ord};
 
 /// Divisibility is the minimum requirement that the fundamental dimensions have in common.
@@ -9,7 +8,7 @@ use core::cmp::{Eq, Ord};
 /// In order to "divide" a dimension, the concepts of "bigger" and "smaller" quantities of that dimension need to exist (`Eq`, `Ord`)
 /// 
 /// `Sized` is here primarily because `Add`, `Sub` and whatnot require it
-pub trait Divisible: Eq + Ord + Add + Sub + Div + Mul + Sized {}
+pub trait Comparable: Eq + Ord {}
 
 // This is just to save us some sanity. "Mobility" of units allows us to pass them around, assume they're safe to copy and otherwise take them as parameters
 /// 

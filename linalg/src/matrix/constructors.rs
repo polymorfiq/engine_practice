@@ -2,10 +2,6 @@ use core::default::Default;
 use core::marker::Copy;
 use super::Matrix;
 
-pub fn matrix<T, const M: usize, const N: usize>(data: [[T; N]; M]) -> Matrix<T, M, N> {
-    Matrix { data: data }
-}
-
 pub fn gen_matrix<G, T, const M: usize, const N: usize>(gen: G) -> Matrix<T, M, N>
     where   G: Fn(usize, usize) -> T,
             T: Default + Copy

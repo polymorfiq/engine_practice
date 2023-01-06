@@ -2,9 +2,9 @@ use super::{Space, Time, Mass};
 
 /// A `Universe` represents the combination of a particular `Mass` and `Space` and `Time`.
 pub trait Universe {
-    type S: Space;
-    type T: Time;
-    type M: Mass;
+    type Space: Space;
+    type Time: Time;
+    type Mass: Mass;
 
-    fn time(&self) -> &Self::T;
+    fn time(&self) -> &Self::Time;
 }
