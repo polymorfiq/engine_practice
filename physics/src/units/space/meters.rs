@@ -47,7 +47,7 @@ impl<const D: usize, B: BaseUnit> Space for Meters<D, B> {
     }
 }
 
-impl<const D: usize, B: BaseUnit> Observable<D, Self> for Meters<D, B> {
+impl<const D: usize, B: BaseUnit> Observable<D> for Meters<D, B> {
     fn new(p: &[B; D]) -> Self {
         Self(Matrix::new([*p]))
     }

@@ -33,7 +33,7 @@ impl<B: BaseUnit> Space for Seconds<B> {
     }
 }
 
-impl<B: BaseUnit> Observable<1, Self> for Seconds<B> {
+impl<B: BaseUnit> Observable<1> for Seconds<B> {
     fn new(p: &[B; 1]) -> Self {
         Self(p[0])
     }

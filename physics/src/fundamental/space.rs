@@ -11,12 +11,11 @@ pub trait Space: Mobile + Comparable {
     fn distance(&self, b: &Self) -> Self;
     fn offset(&self, offset: &Self) -> Self;
     fn scale(&self, b: &Self) -> Self;
-
 }
 
-pub trait Observable<const D: usize, S: Space> {
-    fn components(&self) -> [S; D];
-    fn new(p: &[S::Base; D]) -> S;
+pub trait Observable<const D: usize>: Space {
+    fn components(&self) -> [Self; D];
+    fn new(p: &[Self::Base; D]) -> Self;
 }
 
 pub trait Positional<S: Space> {

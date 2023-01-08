@@ -8,7 +8,7 @@ pub struct NonRotatingBox<S: Space> {
     rbottom: S
 }
 
-impl<S: Space + Observable<2, S>> NonRotatingBox<S> {
+impl<S: Space + Observable<2>> NonRotatingBox<S> {
     pub fn width(&self) -> S {
         let [width, _] = self.ltop.distance(&self.rbottom).components();
         width
@@ -21,7 +21,7 @@ impl<S: Space + Observable<2, S>> NonRotatingBox<S> {
 }
 
 impl<S: Space> Intersectable<S> for NonRotatingBox<S> {}
-impl<S: Space + Observable<2, S>> Intersects<S, Self> for NonRotatingBox<S> {
+impl<S: Space + Observable<2>> Intersects<S, Self> for NonRotatingBox<S> {
     type Intersection = Self;
 
     fn intersection(&self, other: &Self) -> Self::Intersection {
@@ -46,7 +46,7 @@ impl<S: Space + Observable<2, S>> Intersects<S, Self> for NonRotatingBox<S> {
     }
 }
 
-impl<S: Space + Observable<2, S>> Quantifiable<S> for NonRotatingBox<S> {
+impl<S: Space + Observable<2>> Quantifiable<S> for NonRotatingBox<S> {
     fn area(&self) -> S {
         let dist_comps = self.ltop.distance(&self.rbottom).components();
         let mut sum = S::new(&[S::Base::zero(); 2]);
