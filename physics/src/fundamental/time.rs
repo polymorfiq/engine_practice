@@ -1,6 +1,3 @@
 use super::Space;
 
-/// `Time` represents potential for change within the system.
-/// 
-/// The more `Mass` moves through `Space` within a shorter period of `Time`, the more "energy" it takes.
-pub trait Time: Space<1> {}
+pub trait Time: Space {}

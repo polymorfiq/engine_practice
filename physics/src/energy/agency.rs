@@ -1,5 +1,5 @@
 use crate::Universe;
 
-pub trait Agency<const D: usize, U: Universe<D>> {
+pub trait Agency<U: Universe> {
     fn self_force(time: U::Time);
 }

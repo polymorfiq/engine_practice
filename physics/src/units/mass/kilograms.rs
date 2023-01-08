@@ -7,7 +7,3 @@ impl Kilograms {
 }
 
 impl Mass for Kilograms {}
-
-// Required traits for Kilograms -> Mass
-impl crate::Comparable for Kilograms {}
-impl crate::Mobile for Kilograms {}

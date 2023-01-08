@@ -3,12 +3,12 @@ use physics::{Zero, Space};
 use physics::space::{Observable, Quantifiable, Intersects, Intersectable};
 
 #[derive(Copy, Clone)]
-pub struct NonRotatingBox<const D: usize, S: Space<D>> {
+pub struct NonRotatingBox<S: Space> {
     ltop: S,
     rbottom: S
 }
 
-impl<S: Space<2>> NonRotatingBox<2, S> {
+impl<S: Space + Observable<2, S>> NonRotatingBox<S> {
     pub fn width(&self) -> S {
         let [width, _] = self.ltop.distance(&self.rbottom).components();
         width
@@ -20,8 +20,8 @@ impl<S: Space<2>> NonRotatingBox<2, S> {
     }
 }
 
-impl<S: Space<2>> Intersectable<2, S> for NonRotatingBox<2, S> {}
-impl<S: Space<2> + Observable<2, S>> Intersects<2, S, Self> for NonRotatingBox<2, S> {
+impl<S: Space> Intersectable<S> for NonRotatingBox<S> {}
+impl<S: Space + Observable<2, S>> Intersects<S, Self> for NonRotatingBox<S> {
     type Intersection = Self;
 
     fn intersection(&self, other: &Self) -> Self::Intersection {
@@ -46,10 +46,10 @@ impl<S: Space<2> + Observable<2, S>> Intersects<2, S, Self> for NonRotatingBox<2
     }
 }
 
-impl<const D: usize, S: Space<D> + Observable<D, S>> Quantifiable<D, S> for NonRotatingBox<D, S> {
+impl<S: Space + Observable<2, S>> Quantifiable<S> for NonRotatingBox<S> {
     fn area(&self) -> S {
         let dist_comps = self.ltop.distance(&self.rbottom).components();
-        let mut sum = S::new(&[S::Base::zero(); D]);
+        let mut sum = S::new(&[S::Base::zero(); 2]);
 
         for i in 0..dist_comps.len() {
             let j = (i + 1) % dist_comps.len();

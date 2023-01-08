@@ -1,5 +1,5 @@
 mod properties;
-pub use properties::{Comparable, Mobile};
+pub use properties::{Combineable, Comparable, Mobile};
 
 pub mod space;
 pub use space::Space;

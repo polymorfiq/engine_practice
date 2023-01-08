@@ -5,23 +5,9 @@ use crate::space::{BaseUnit, Observable};
 #[derive(Copy, Clone)]
 pub struct Meters<const DIMENSIONS: usize, B: BaseUnit>(Matrix<B, 1, DIMENSIONS>);
 
-impl<const D: usize, B: BaseUnit> Observable<D, Self> for Meters<D, B> {
-    fn new(p: &[B; D]) -> Self {
-        Self(Matrix::new([*p]))
-    }
-}
-
-impl<const D: usize, B: BaseUnit> Space<D> for Meters<D, B> {
+impl<const D: usize, B: BaseUnit> Space for Meters<D, B> {
+    const DIMENSIONS: usize = D;
     type Base = B;
-
-    fn components(&self) -> [Self; D] {
-        let mut comps: [Self; D] = [Self::new(&[B::zero(); D]); D];
-        for i in 0..D {
-            comps[i].0.set(0, i, *self.0.value_at(0, i))
-        }
-
-        comps
-    }
 
     fn area(&self) -> Self {
         *self
@@ -61,8 +47,20 @@ impl<const D: usize, B: BaseUnit> Space<D> for Meters<D, B> {
     }
 }
 
-impl<const D: usize, B: BaseUnit> crate::Comparable for Meters<D, B> {}
-impl<const D: usize, B: BaseUnit> crate::Mobile for Meters<D, B> {}
+impl<const D: usize, B: BaseUnit> Observable<D, Self> for Meters<D, B> {
+    fn new(p: &[B; D]) -> Self {
+        Self(Matrix::new([*p]))
+    }
+
+    fn components(&self) -> [Self; D] {
+        let mut comps: [Self; D] = [Self::new(&[B::zero(); D]); D];
+        for i in 0..D {
+            comps[i].0.set(0, i, *self.0.value_at(0, i))
+        }
+
+        comps
+    }
+}
 
 impl<const D: usize, B: BaseUnit> core::cmp::PartialOrd for Meters<D, B> {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
@@ -91,15 +89,5 @@ impl<const D: usize, B: BaseUnit> core::cmp::PartialEq for Meters<D, B> {
         }
 
         true
-    }
-}
-
-impl<const D: usize, B: BaseUnit> core::ops::Add for Meters<D, B> {
-    type Output = Self;
-    
-    fn add(self, rhs: Self) -> Self::Output {
-        let mut area = Self::new(&[B::zero(); D]);
-        area.0 = self.0 + rhs.0;
-        area
     }
 }
