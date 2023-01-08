@@ -1,10 +1,9 @@
-use core::default::Default;
-use core::marker::Copy;
 use core::ops;
+use crate::Mobile;
 use super::{Matrix, gen_matrix};
 
-impl <T, const M: usize, const N: usize> ops::Add for Matrix<T, M, N>
-    where T: ops::Add<Output = T> + Default + Copy
+impl <T: Mobile, const M: usize, const N: usize> ops::Add for Matrix<T, M, N>
+    where T: ops::Add<Output = T>
 {
     type Output = Self;
 
@@ -13,8 +12,8 @@ impl <T, const M: usize, const N: usize> ops::Add for Matrix<T, M, N>
     }
 }
 
-impl <T, const M: usize, const N: usize> ops::Sub for Matrix<T, M, N>
-    where T: ops::Sub<Output = T> + Default + Copy
+impl <T: Mobile, const M: usize, const N: usize> ops::Sub for Matrix<T, M, N>
+    where T: ops::Sub<Output = T>
 {
     type Output = Self;
 
@@ -23,8 +22,8 @@ impl <T, const M: usize, const N: usize> ops::Sub for Matrix<T, M, N>
     }
 }
 
-impl <T, const M: usize, const N: usize> ops::Mul<T> for Matrix<T, M, N>
-    where T: Default + Copy + ops::Mul<Output = T>
+impl <T: Mobile, const M: usize, const N: usize> ops::Mul<T> for Matrix<T, M, N>
+    where T: ops::Mul<Output = T>
 {
     type Output = Self;
 
@@ -33,8 +32,8 @@ impl <T, const M: usize, const N: usize> ops::Mul<T> for Matrix<T, M, N>
     }
 }
 
-impl <T, const M: usize, const N: usize> ops::Mul<Self> for Matrix<T, M, N>
-    where T: Default + Copy + ops::Mul<Output = T>
+impl <T: Mobile, const M: usize, const N: usize> ops::Mul<Self> for Matrix<T, M, N>
+    where T: ops::Mul<Output = T>
 {
     type Output = Self;
 
@@ -43,8 +42,8 @@ impl <T, const M: usize, const N: usize> ops::Mul<Self> for Matrix<T, M, N>
     }
 }
 
-impl <T, const M: usize, const N: usize> ops::Div<T> for Matrix<T, M, N>
-    where T: Default + Copy + ops::Div<Output = T>
+impl <T: Mobile, const M: usize, const N: usize> ops::Div<T> for Matrix<T, M, N>
+    where T: ops::Div<Output = T>
 {
     type Output = Self;
 
@@ -53,8 +52,8 @@ impl <T, const M: usize, const N: usize> ops::Div<T> for Matrix<T, M, N>
     }
 }
 
-impl <T, const M: usize, const N: usize> ops::Div<Self> for Matrix<T, M, N>
-    where T: Default + Copy + ops::Div<Output = T>
+impl <T: Mobile, const M: usize, const N: usize> ops::Div<Self> for Matrix<T, M, N>
+    where T: ops::Div<Output = T>
 {
     type Output = Self;
 

@@ -10,3 +10,5 @@ mod fundamental;
 pub use fundamental::*;
 
 pub mod units;
+
+pub use linalg::Zero;

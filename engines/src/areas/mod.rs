@@ -1,2 +1,2 @@
 mod boxes;
-pub use boxes::Box;
+pub use boxes::NonRotatingBox;

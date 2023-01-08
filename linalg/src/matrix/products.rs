@@ -1,10 +1,9 @@
-use core::default::Default;
-use core::marker::Copy;
 use core::ops;
+use crate::Mobile;
 use super::{Matrix, gen_matrix};
 
 impl <T, const M: usize, const N: usize> Matrix<T, M, N>
-    where T: Default + Copy + core::iter::Sum + ops::Mul<Output = T>
+    where T: Mobile + core::iter::Sum + ops::Mul<Output = T>
 {
     pub fn dot<const O: usize>(&self, b: &Matrix<T, N, O>) -> Matrix<T, M, O> {
         gen_matrix(|m, o| {
