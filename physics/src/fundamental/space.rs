@@ -22,5 +22,5 @@ pub trait AreaIntersection<S: Space, A: Area<S>>: Area<S> {
 }
 
 pub trait SpaceIntersection<S: Space>: Area<S> {
-    fn space_intersection(&self, other: &S) -> Self;
+    fn space_intersection(&self, other: &[S]) -> &[S];
 }
