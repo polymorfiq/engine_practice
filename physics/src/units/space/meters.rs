@@ -1,6 +1,6 @@
 use linalg::Matrix;
 use crate::Space;
-use crate::space::{BaseUnit, Observable};
+use crate::space::{BaseUnit, ObservableSpace};
 
 #[derive(Copy, Clone)]
 pub struct Meters<const DIMENSIONS: usize, B: BaseUnit>(Matrix<B, 1, DIMENSIONS>);
@@ -8,46 +8,9 @@ pub struct Meters<const DIMENSIONS: usize, B: BaseUnit>(Matrix<B, 1, DIMENSIONS>
 impl<const D: usize, B: BaseUnit> Space for Meters<D, B> {
     const DIMENSIONS: usize = D;
     type Base = B;
-
-    fn area(&self) -> Self {
-        *self
-    }
-
-    fn distance(&self, b: &Self) -> Self {
-        let mut new_vals: [B; D] = [B::zero(); D];
-
-        for i in 0..D {
-            new_vals[i] = *b.0.value_at(0, i) - *self.0.value_at(0, i);
-        }
-
-        Self::new(&new_vals)
-    }
-
-    fn offset(&self, offset: &Self) -> Self {
-        let mut new_vals: [B; D] = [B::zero(); D];
-        for i in 0..D {
-            new_vals[i] = *self.0.value_at(0, i) + *offset.0.value_at(0, i);
-        }
-
-        Self::new(&new_vals)
-    }
-
-    fn scale(&self, b: &Self) -> Self {
-        let mut other_s = B::zero();
-        for i in 0..D {
-            other_s = other_s + *b.0.value_at(0, i)
-        }
-
-        let mut new_vals: [B; D] = [B::zero(); D];
-        for i in 0..D {
-            new_vals[i] = *self.0.value_at(0, i) * other_s;
-        }
-
-        Self::new(&new_vals)
-    }
 }
 
-impl<const D: usize, B: BaseUnit> Observable<D> for Meters<D, B> {
+impl<const D: usize, B: BaseUnit> ObservableSpace<D> for Meters<D, B> {
     fn new(p: &[B; D]) -> Self {
         Self(Matrix::new([*p]))
     }
@@ -90,4 +53,24 @@ impl<const D: usize, B: BaseUnit> core::cmp::PartialEq for Meters<D, B> {
 
         true
     }
+}
+
+impl<const D: usize, B: BaseUnit> core::ops::Add for Meters<D, B> {
+    type Output = Self;
+    fn add(self, other: Self) -> Self::Output { Self(self.0 + other.0) }
+}
+
+impl<const D: usize, B: BaseUnit> core::ops::Sub for Meters<D, B> {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self::Output { Self(self.0 - other.0) }
+}
+
+impl<const D: usize, B: BaseUnit> core::ops::Div for Meters<D, B> {
+    type Output = Self;
+    fn div(self, other: Self) -> Self::Output { Self(self.0 / other.0) }
+}
+
+impl<const D: usize, B: BaseUnit> core::ops::Mul for Meters<D, B> {
+    type Output = Self;
+    fn mul(self, other: Self) -> Self::Output { Self(self.0 * other.0) }
 }

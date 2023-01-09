@@ -4,7 +4,7 @@ mod existence;
 pub use existence::Body;
 
 mod energy;
-pub use energy::{Agency, Field, Force};
+pub use energy::Force;
 
 mod fundamental;
 pub use fundamental::*;

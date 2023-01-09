@@ -3,33 +3,24 @@ use super::{Combineable, Comparable, Mobile};
 pub trait BaseUnit: Combineable + Comparable + Mobile + linalg::Mobile {}
 impl<T: Combineable + Comparable + Mobile + linalg::Mobile> BaseUnit for T {}
 
-pub trait Space: Mobile + Comparable {
+pub trait Space: Mobile + Comparable + Combineable {
     const DIMENSIONS: usize;
     type Base: BaseUnit;
-
-    fn area(&self) -> Self;
-    fn distance(&self, b: &Self) -> Self;
-    fn offset(&self, offset: &Self) -> Self;
-    fn scale(&self, b: &Self) -> Self;
 }
 
-pub trait Observable<const D: usize>: Space {
+pub trait ObservableSpace<const D: usize>: Space {
     fn components(&self) -> [Self; D];
     fn new(p: &[Self::Base; D]) -> Self;
 }
 
-pub trait Positional<S: Space> {
-    fn position(&self) -> &Self;
+pub trait Area<S: Space> {
+    fn amount_of_space(&self) -> S;
 }
 
-pub trait Quantifiable<S: Space> {
-    fn area(&self) -> S;
+pub trait AreaIntersection<S: Space, A: Area<S>>: Area<S> {
+    fn area_intersection(&self, other: &A) -> Self;
 }
 
-pub trait Intersectable<S: Space> {}
-pub trait Intersects<S: Space, T: Intersectable<S>> {
-    type Intersection: Quantifiable<S>;
-
-    fn distance_until_intersection(&self, other: &T) -> S;
-    fn intersection(&self, other: &T) -> Self::Intersection;
+pub trait SpaceIntersection<S: Space>: Area<S> {
+    fn space_intersection(&self, other: &S) -> Self;
 }

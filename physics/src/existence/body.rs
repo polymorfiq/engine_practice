@@ -1,9 +1,9 @@
 use crate::Universe;
-use crate::space::Quantifiable;
+use crate::space::Area;
 
 /// A particular `Mass` moving through a `Space` and `Time`
 pub trait Body<U: Universe> {
-    type Boundary: Quantifiable<U::Space>;
+    type Boundary: Area<U::Space>;
 
     fn boundary(&self) -> Self::Boundary;
     fn position(&self) -> U::Space;
