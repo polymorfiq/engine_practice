@@ -1,6 +1,7 @@
 extern crate ash;
 
-use ash::{vk, Entry, extensions::ext::DebugUtils};
+use ash::{vk, extensions::ext::DebugUtils};
+use super::super::ids::EntryID;
 use std::borrow::Cow;
 use std::ffi::CStr;
 
@@ -11,7 +12,7 @@ pub(super) struct Debugger {
 }
 
 impl Debugger {
-    pub fn new(entry: &Entry, instance: &ash::Instance) -> Self {
+    pub fn new(entry_id: EntryID, instance: &ash::Instance) -> Self {
         let debug_info = vk::DebugUtilsMessengerCreateInfoEXT::builder()
             .message_severity(
                 vk::DebugUtilsMessageSeverityFlagsEXT::ERROR
@@ -25,6 +26,7 @@ impl Debugger {
             )
             .pfn_user_callback(Some(vulkan_debug_callback));
     
+        let entry = entry_id.entry();
         let debug_utils_loader = DebugUtils::new(&entry, instance);
         let messenger = unsafe {
             debug_utils_loader

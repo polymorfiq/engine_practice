@@ -22,20 +22,20 @@ fn main() {
         .engine_version(0)
         .api_version(vk::make_api_version(0, 1, 0, 0));
         
-    let system = System::new(entry, app_info);
+    let mut system = System::new(entry, app_info);
     let window = Window::new("My Window", 800, 600);
 
-    let instance = system.instance(window);
-    let surface = system.surface(&instance);
-    let device = instance.device_for_surface(&surface).expect("Device not found");
+    let instance_id = system.instance(window);
+    let surface_id = system.surface(&instance_id);
+    let device_id = system.device(&surface_id).expect("Device not found");
 
-    instance.window.handle_events(|| {
+    let fmt = device_id.device().surface_format();
+    let caps = device_id.device().surface_capabilities();
+
+    instance_id.instance().window.handle_events(|| {
 
     });
 
-    device.cleanup();
-    instance.cleanup_surfaces(&[surface]);
-    instance.cleanup();
     system.cleanup();
 
     println!("Cleaned up!!");
