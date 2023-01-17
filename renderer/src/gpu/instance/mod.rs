@@ -1,5 +1,3 @@
-extern crate ash;
-
 use crate::window::Window;
 
 mod debugger;

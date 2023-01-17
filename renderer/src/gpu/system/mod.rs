@@ -1,5 +1,3 @@
-extern crate ash;
-
 use crate::window::Window;
 use super::{Device, Instance, Surface};
 use super::ids::{DeviceID, EntryID, SurfaceID, InstanceID};

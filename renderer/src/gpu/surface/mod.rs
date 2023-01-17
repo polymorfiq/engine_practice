@@ -1,5 +1,3 @@
-extern crate ash;
-
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 use super::ids::InstanceID;
 

@@ -1,8 +1,12 @@
 
 extern crate ash;
+extern crate shaderc;
+extern crate winit;
+
 use ash::vk;
 use std::ffi::CString;
 use std::ffi::CStr;
+use std::cell::RefCell;
 
 mod window;
 use window::Window;
@@ -19,6 +23,7 @@ mod macros;
 fn main() {
     let app_name_str = CString::new("my_renderer_app").expect("Unable to wrap app_name in CString");
     let engine_name_str = CString::new("my_renderer_engine").expect("Unable to wrap engine_name in CString");
+    let start_time = std::time::SystemTime::now();
 
     let entry = unsafe { ash::Entry::load().expect("Error loading ash::Entry") };
     let app_info = vk::ApplicationInfo::builder()
@@ -84,8 +89,8 @@ fn main() {
         ..Default::default()
     };
     
-    let vert_shader = spv_to_shader!(device_id, "./shaders/vert.spv");
-    let frag_shader = spv_to_shader!(device_id, "./shaders/frag.spv");
+    let vert_shader = glsl_to_shader!(device_id, "./shaders/triangle.vert", shaderc::ShaderKind::Vertex);
+    let frag_shader = glsl_to_shader!(device_id, "./shaders/triangle.frag", shaderc::ShaderKind::Fragment);
 
     let shader_entry_name = unsafe { CStr::from_bytes_with_nul_unchecked(b"main\0") };
     let shader_stage_create_infos = [
@@ -162,6 +167,19 @@ fn main() {
     let dynamic_state_info =
         vk::PipelineDynamicStateCreateInfo::builder().dynamic_states(&dynamic_state);
 
+    let push_constant_range = vk::PushConstantRange::builder()
+        .stage_flags(vk::ShaderStageFlags::FRAGMENT)
+        .offset(0)
+        .size(std::mem::size_of::<u32>() as u32)
+        .build();
+
+    let push_constant_ranges = &[push_constant_range];
+    let layout_info = vk::PipelineLayoutCreateInfo::builder()
+        .push_constant_ranges(push_constant_ranges)
+        .build();
+
+    let pipeline_layout = engine.create_pipeline_layout(layout_info);
+
     let graphic_pipeline_info = vk::GraphicsPipelineCreateInfo::builder()
         .stages(&shader_stage_create_infos)
         .vertex_input_state(&vertex_input_state_info)
@@ -172,7 +190,7 @@ fn main() {
         .depth_stencil_state(&depth_state_info)
         .color_blend_state(&color_blend_state)
         .dynamic_state(&dynamic_state_info)
-        .layout(engine.pipeline_layout)
+        .layout(pipeline_layout)
         .render_pass(engine.render_pass);
 
     let device = device_id.device();
@@ -219,8 +237,13 @@ fn main() {
                 .expect("Reset fences failed.");
         }
 
-        let present_idx = engine.present_idx(present_complete_semaphore);
+        let elapsed = start_time.elapsed().unwrap();
+        let all_push_constants = [elapsed.as_millis() as u32];
+        let (_, push_constant_bytes, _) = unsafe {
+            all_push_constants.as_slice().align_to::<u8>()
+        };
 
+        let present_idx = engine.present_idx(present_complete_semaphore);
         let device = device_id.device();
         let surface_resolution = device.surface_resolution();
         let render_pass_begin_info = vk::RenderPassBeginInfo::builder()
@@ -256,6 +279,15 @@ fn main() {
                     0,
                     vk::IndexType::UINT32,
                 );
+
+                dvc.cmd_push_constants(
+                    command_buffer,
+                    pipeline_layout,
+                    vk::ShaderStageFlags::FRAGMENT,
+                    0,
+                    push_constant_bytes,
+                );
+
                 dvc.cmd_draw_indexed(
                     command_buffer,
                     index_buffer_data.len() as u32,
@@ -303,6 +335,7 @@ fn main() {
 
     engine.wait_idle();
     
+    engine.cleanup_pipeline_layout(&pipeline_layout);
     for pipeline in graphics_pipelines {
         engine.cleanup_pipeline(&pipeline);
     }

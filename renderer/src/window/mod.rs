@@ -1,5 +1,3 @@
-extern crate winit;
-
 use std::cell::RefCell;
 use winit::{
     dpi::LogicalSize,

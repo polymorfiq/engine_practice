@@ -1,5 +1,3 @@
-extern crate ash;
-
 use ash::{
     vk,
     extensions::khr::Swapchain

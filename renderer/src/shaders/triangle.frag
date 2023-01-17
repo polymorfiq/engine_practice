@@ -4,7 +4,12 @@
 
 layout (location = 0) in vec4 o_color;
 layout (location = 0) out vec4 uFragColor;
+layout (push_constant) uniform PushConstants {
+    uint time;
+} pcs;
 
 void main() {
-    uFragColor = o_color;
+    // Time varying pixel color
+    vec3 col = 0.5 + 0.5*cos((pcs.time / 500.0) + o_color.xyx);
+    uFragColor = vec4(col, 1.0);
 }

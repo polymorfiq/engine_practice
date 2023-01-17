@@ -1,5 +1,3 @@
-extern crate ash;
-
 use ash::{vk, extensions::ext::DebugUtils};
 use super::super::ids::EntryID;
 use std::borrow::Cow;

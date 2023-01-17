@@ -1,5 +1,3 @@
-extern crate ash;
-
 use super::Buffer;
 use crate::gpu::System;
 use crate::gpu::ids::{DeviceID, InstanceID, SurfaceID};
@@ -17,10 +15,8 @@ pub struct Engine<'a> {
     depth_image_memory: vk::DeviceMemory,
     pub render_pass: vk::RenderPass,
     pub framebuffers: Vec<vk::Framebuffer>,
-    pub pipeline_layout: vk::PipelineLayout,
     pub setup_fence: vk::Fence
 }
-
 
 #[derive(Clone, Debug, Copy)]
 pub struct Vertex {
@@ -57,8 +53,6 @@ impl<'a> Engine<'a> {
             render_pass
         );
 
-        let pipeline_layout = get_pipeline_layout(device_id);
-
         let fence_create_info = vk::FenceCreateInfo::builder().flags(vk::FenceCreateFlags::SIGNALED);
         let setup_fence = unsafe {
             device.device
@@ -78,7 +72,6 @@ impl<'a> Engine<'a> {
             depth_image_view,
             render_pass,
             framebuffers,
-            pipeline_layout,
             setup_fence
         }
     }
@@ -156,6 +149,16 @@ impl<'a> Engine<'a> {
         let index_buffer = get_index_buffer(&self.device_id, index_buffer_data);
 
         VertexInput {buffer, index_buffer}
+    }
+
+    pub fn create_pipeline_layout(&self, info: vk::PipelineLayoutCreateInfo) -> vk::PipelineLayout {
+        let device = self.device_id.device();
+
+        unsafe {
+            device.device
+                .create_pipeline_layout(&info, None)
+                .expect("Error creating pipeline layout")
+        }
     }
 
     pub fn present_idx(&self, present_complete_semaphore: vk::Semaphore) -> u32 {
@@ -344,6 +347,15 @@ impl<'a> Engine<'a> {
         }
     }
 
+    pub fn cleanup_pipeline_layout(&self, layout: &vk::PipelineLayout) {
+        let device = self.device_id.device();
+
+        unsafe {
+            device.device
+                .destroy_pipeline_layout(*layout, None)
+        }
+    }
+
     pub fn cleanup_shader(&self, shader: &vk::ShaderModule) {
         let device = self.device_id.device();
 
@@ -364,10 +376,6 @@ impl<'a> Engine<'a> {
 
     pub fn cleanup(&self) {
         let device = self.device_id.device();
-
-        unsafe {
-            device.device.destroy_pipeline_layout(self.pipeline_layout, None);
-        }
 
         self.cleanup_fence(&self.setup_fence);
 
@@ -663,17 +671,6 @@ fn get_index_buffer(device_id: &DeviceID, index_buffer_data: &[u32]) -> Buffer {
     }
 
     Buffer::new(index_buffer, index_buffer_memory)
-}
-
-fn get_pipeline_layout(device_id: &DeviceID) -> vk::PipelineLayout {
-    let layout_create_info = vk::PipelineLayoutCreateInfo::default();
-
-    let device = device_id.device();
-    unsafe {
-        device.device
-            .create_pipeline_layout(&layout_create_info, None)
-            .expect("Error creating pipeline layout")
-    }
 }
 
 fn find_memorytype_index(
