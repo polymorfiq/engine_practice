@@ -6,7 +6,6 @@ extern crate winit;
 use ash::vk;
 use std::ffi::CString;
 use std::ffi::CStr;
-use std::cell::RefCell;
 
 mod window;
 use window::Window;
@@ -168,7 +167,7 @@ fn main() {
         vk::PipelineDynamicStateCreateInfo::builder().dynamic_states(&dynamic_state);
 
     let push_constant_range = vk::PushConstantRange::builder()
-        .stage_flags(vk::ShaderStageFlags::FRAGMENT)
+        .stage_flags(vk::ShaderStageFlags::FRAGMENT | vk::ShaderStageFlags::VERTEX)
         .offset(0)
         .size(std::mem::size_of::<u32>() as u32)
         .build();
@@ -283,7 +282,7 @@ fn main() {
                 dvc.cmd_push_constants(
                     command_buffer,
                     pipeline_layout,
-                    vk::ShaderStageFlags::FRAGMENT,
+                    vk::ShaderStageFlags::FRAGMENT | vk::ShaderStageFlags::VERTEX,
                     0,
                     push_constant_bytes,
                 );
