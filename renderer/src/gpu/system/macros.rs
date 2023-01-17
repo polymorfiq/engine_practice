@@ -19,7 +19,7 @@ macro_rules! find_queue {
                     ).unwrap();
 
                     if supports_queue && supports_surface {
-                        Some((*pdevice, index))
+                        Some((*pdevice, index as u32))
                     } else {
                         None
                     }

@@ -113,9 +113,10 @@ impl<'a> System<'a> {
                 let device_id = DeviceID::new(Device::new(
                     surface_id.clone(),
                     pdevice,
-                    device
+                    device,
+                    graphics_queue_family_idx
                 ));
-                
+
                 self.devices.push(device_id.clone());
                 Some(device_id)
             }

@@ -15,11 +15,13 @@ mod macros;
 
 pub struct Window {
     window: winit::window::Window,
-    event_loop: RefCell<EventLoop<()>>
+    event_loop: RefCell<EventLoop<()>>,
+    pub width: u32,
+    pub height: u32
 }
 
 impl Window {
-    pub fn new(name: &str, width: u16, height: u16) -> Self {
+    pub fn new(name: &str, width: u32, height: u32) -> Self {
         let size = LogicalSize::new(
             f64::from(width), 
             f64::from(height)
@@ -34,7 +36,9 @@ impl Window {
 
         Self {
             window: window,
-            event_loop: RefCell::new(event_loop)
+            event_loop: RefCell::new(event_loop),
+            width,
+            height
         }
     }
 
