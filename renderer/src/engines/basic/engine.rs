@@ -76,76 +76,82 @@ impl<'a> Engine<'a> {
         }
     }
 
-    pub fn vertex_input(&self, vertices: &[Vertex], index_buffer_data: &[u32]) -> VertexInput {
+    pub fn render_loop<F: Fn(&ash::Device) -> ()>(&self, f: F) {
+        self.instance_id.instance().window.handle_events(||{
+            f(&self.device_id.device().device)
+        })
+    }
+
+    pub fn input<T: Copy>(&self, usage: vk::BufferUsageFlags, vertices: &[T], index_buffer_data: &[u32]) -> VertexInput {
         let device = self.device_id.device();
 
-        let vertex_input_buffer_info = vk::BufferCreateInfo {
-            size: (vertices.len() as u64) * std::mem::size_of::<Vertex>() as u64,
-            usage: vk::BufferUsageFlags::VERTEX_BUFFER,
+        let input_buffer_info = vk::BufferCreateInfo {
+            size: (vertices.len() as u64) * std::mem::size_of::<T>() as u64,
+            usage: usage,
             sharing_mode: vk::SharingMode::EXCLUSIVE,
             ..Default::default()
         };
 
-        let vertex_input_buffer = unsafe {
+        let input_buffer = unsafe {
             device
                 .device
-                .create_buffer(&vertex_input_buffer_info, None)
+                .create_buffer(&input_buffer_info, None)
                 .unwrap()
         };
 
-        let vertex_input_buffer_memory_req = unsafe {
+        let input_buffer_memory_req = unsafe {
             device.device
-                .get_buffer_memory_requirements(vertex_input_buffer)
+                .get_buffer_memory_requirements(input_buffer)
         };
 
         let device_memory_properties = device.memory_properties();
-        let vertex_input_buffer_memory_index = find_memorytype_index(
-            &vertex_input_buffer_memory_req,
+        let input_buffer_memory_index = find_memorytype_index(
+            &input_buffer_memory_req,
             &device_memory_properties,
             vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
         )
-        .expect("Unable to find suitable memorytype for the vertex buffer.");
+        .expect("Unable to find suitable memorytype for the buffer.");
 
-        let vertex_buffer_allocate_info = vk::MemoryAllocateInfo {
-            allocation_size: vertex_input_buffer_memory_req.size,
-            memory_type_index: vertex_input_buffer_memory_index,
+        let buffer_allocate_info = vk::MemoryAllocateInfo {
+            allocation_size: input_buffer_memory_req.size,
+            memory_type_index: input_buffer_memory_index,
             ..Default::default()
         };
 
-        let vertex_input_buffer_memory = unsafe {
+        let input_buffer_memory = unsafe {
             device.device
-                .allocate_memory(&vertex_buffer_allocate_info, None)
-                .expect("Error allocating vertex input buffer")
+                .allocate_memory(&buffer_allocate_info, None)
+                .expect("Error allocating input buffer")
         };
 
-        let vert_ptr = unsafe {
+        let buffer_ptr = unsafe {
             device.device
                 .map_memory(
-                    vertex_input_buffer_memory,
+                    input_buffer_memory,
                     0,
-                    vertex_input_buffer_memory_req.size,
+                    input_buffer_memory_req.size,
                     vk::MemoryMapFlags::empty(),
                 )
-                .expect("Error mapping input vertex memory")
+                .expect("Error mapping input buffer memory")
         };
 
-        let mut vert_align = unsafe {
+        let mut buffer_align = unsafe {
             ash::util::Align::new(
-                vert_ptr,
+                buffer_ptr,
                 std::mem::align_of::<Vertex>() as u64,
-                vertex_input_buffer_memory_req.size,
+                input_buffer_memory_req.size,
             )
         };
-        vert_align.copy_from_slice(&vertices);
-        unsafe { device.device.unmap_memory(vertex_input_buffer_memory) }
+        buffer_align.copy_from_slice(&vertices);
+        unsafe { device.device.unmap_memory(input_buffer_memory) }
         
         unsafe {
             device.device
-                .bind_buffer_memory(vertex_input_buffer, vertex_input_buffer_memory, 0)
-                .expect("Error binding input vertex buffer memory")
+                .bind_buffer_memory(input_buffer, input_buffer_memory, 0)
+                .expect("Error binding input buffer memory")
         }
 
-        let buffer = Buffer::new(vertex_input_buffer, vertex_input_buffer_memory);
+        let buffer = Buffer::new(input_buffer, input_buffer_memory);
         let index_buffer = get_index_buffer(&self.device_id, index_buffer_data);
 
         VertexInput {buffer, index_buffer}
@@ -356,13 +362,8 @@ impl<'a> Engine<'a> {
         }
     }
 
-    pub fn cleanup_shader(&self, shader: &vk::ShaderModule) {
-        let device = self.device_id.device();
-
-        unsafe {
-            device.device
-                .destroy_shader_module(*shader, None);
-        }
+    pub fn cleanup(&self, obj: &dyn crate::gpuv2::Cleanup) {
+        obj.cleanup(self);
     }
 
     pub fn cleanup_buffer(&self, buffer: &Buffer) {
@@ -373,8 +374,10 @@ impl<'a> Engine<'a> {
             device.device.destroy_buffer(buffer.buffer, None);
         }
     }
+}
 
-    pub fn cleanup(&self) {
+impl crate::gpuv2::Cleanup for Engine<'_> {
+    fn cleanup(&self, engine: &Engine) {
         let device = self.device_id.device();
 
         self.cleanup_fence(&self.setup_fence);
