@@ -13,7 +13,7 @@ mod gpu;
 use gpu::System;
 
 mod gpuv2;
-use gpuv2::{push_constants, shaders, viewport};
+use gpuv2::{push_constants, shaders, viewport, VertexInput};
 
 mod engines;
 use engines::basic::{Engine, Vertex};
@@ -54,10 +54,15 @@ fn main() {
     let surface_id = system.surface(&instance_id);
     let device_id = system.device(&surface_id).expect("Device not found");
     let engine = Engine::new(&system, &device_id);
+    
+    let device_props = gpuv2::DeviceProperties {
+        physical_memory: device_id.device().memory_properties()
+    };
 
     //
     // Setup Shader Inputs
     //
+    let vertex_index_data = [0u32, 1, 2];
     let vertices = [
         Vertex {
             pos: [-1.0, 1.0, 0.0, 1.0],
@@ -73,37 +78,25 @@ fn main() {
         },
     ];
 
-    let vertex_index_data = [0u32, 1, 2];
-    let vertex_input = engine.input(
-        vk::BufferUsageFlags::VERTEX_BUFFER,
-        &vertices,
-        &vertex_index_data
-    );
+    let vertex_input: VertexInput<Vertex, 3> = VertexInput::new(&device_props)
+        .usage(vk::BufferUsageFlags::VERTEX_BUFFER)
+        .sharing_mode(vk::SharingMode::EXCLUSIVE)
+        .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
+        .input_rate(vk::VertexInputRate::VERTEX)
+        .attribute(0, offset_of!(Vertex, pos) as u32, 0, vk::Format::R32G32B32A32_SFLOAT)
+        .attribute(1, offset_of!(Vertex, color) as u32, 0, vk::Format::R32G32B32A32_SFLOAT)
+        .load(&device_id.device().device, &vertices);
 
-    let vertex_input_binding_descriptions = [vk::VertexInputBindingDescription {
-        binding: 0,
-        stride: std::mem::size_of::<Vertex>() as u32,
-        input_rate: vk::VertexInputRate::VERTEX,
-    }];
+    let index_buffer: VertexInput<u32, 3> = VertexInput::new(&device_props)
+        .usage(vk::BufferUsageFlags::INDEX_BUFFER)
+        .sharing_mode(vk::SharingMode::EXCLUSIVE)
+        .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
+        .load(&device_id.device().device, &vertex_index_data);
 
-    let vertex_input_attribute_descriptions = [
-        vk::VertexInputAttributeDescription {
-            location: 0,
-            binding: 0,
-            format: vk::Format::R32G32B32A32_SFLOAT,
-            offset: offset_of!(Vertex, pos) as u32,
-        },
-        vk::VertexInputAttributeDescription {
-            location: 1,
-            binding: 0,
-            format: vk::Format::R32G32B32A32_SFLOAT,
-            offset: offset_of!(Vertex, color) as u32,
-        },
-    ];
-
+    let vertex_descs = [vertex_input.description()];
     let vertex_input_state_info = vk::PipelineVertexInputStateCreateInfo::builder()
-        .vertex_attribute_descriptions(&vertex_input_attribute_descriptions)
-        .vertex_binding_descriptions(&vertex_input_binding_descriptions);
+        .vertex_attribute_descriptions(vertex_input.attributes())
+        .vertex_binding_descriptions(&vertex_descs);
 
     //
     // Initialize Shaders
@@ -231,12 +224,12 @@ fn main() {
                 dvc.cmd_bind_vertex_buffers(
                     command_buffer,
                     0,
-                    &[vertex_input.buffer.buffer],
+                    &[vertex_input.buffer.unwrap()],
                     &[0],
                 );
                 dvc.cmd_bind_index_buffer(
                     command_buffer,
-                    vertex_input.index_buffer.buffer,
+                    index_buffer.buffer.unwrap(),
                     0,
                     vk::IndexType::UINT32,
                 );
@@ -303,8 +296,8 @@ fn main() {
     engine.cleanup_sempahore(&present_complete_semaphore);
     engine.cleanup_sempahore(&rendering_complete_semaphore);
     engine.cleanup_fence(&render_fence);
-    engine.cleanup_buffer(&vertex_input.index_buffer);
-    engine.cleanup_buffer(&vertex_input.buffer);
+    engine.cleanup(&index_buffer);
+    engine.cleanup(&vertex_input);
     engine.cleanup(&engine);
 
     println!("Cleaned up!!");

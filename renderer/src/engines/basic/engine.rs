@@ -1,6 +1,6 @@
-use super::Buffer;
 use crate::gpu::System;
 use crate::gpu::ids::{DeviceID, InstanceID, SurfaceID};
+use crate::gpuv2::Cleanup;
 use ash::vk;
 
 pub struct Engine<'a> {
@@ -22,11 +22,6 @@ pub struct Engine<'a> {
 pub struct Vertex {
     pub pos: [f32; 4],
     pub color: [f32; 4],
-}
-
-pub struct VertexInput {
-    pub buffer: Buffer,
-    pub index_buffer: Buffer
 }
 
 impl<'a> Engine<'a> {
@@ -82,81 +77,6 @@ impl<'a> Engine<'a> {
         })
     }
 
-    pub fn input<T: Copy>(&self, usage: vk::BufferUsageFlags, vertices: &[T], index_buffer_data: &[u32]) -> VertexInput {
-        let device = self.device_id.device();
-
-        let input_buffer_info = vk::BufferCreateInfo {
-            size: (vertices.len() as u64) * std::mem::size_of::<T>() as u64,
-            usage: usage,
-            sharing_mode: vk::SharingMode::EXCLUSIVE,
-            ..Default::default()
-        };
-
-        let input_buffer = unsafe {
-            device
-                .device
-                .create_buffer(&input_buffer_info, None)
-                .unwrap()
-        };
-
-        let input_buffer_memory_req = unsafe {
-            device.device
-                .get_buffer_memory_requirements(input_buffer)
-        };
-
-        let device_memory_properties = device.memory_properties();
-        let input_buffer_memory_index = find_memorytype_index(
-            &input_buffer_memory_req,
-            &device_memory_properties,
-            vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-        )
-        .expect("Unable to find suitable memorytype for the buffer.");
-
-        let buffer_allocate_info = vk::MemoryAllocateInfo {
-            allocation_size: input_buffer_memory_req.size,
-            memory_type_index: input_buffer_memory_index,
-            ..Default::default()
-        };
-
-        let input_buffer_memory = unsafe {
-            device.device
-                .allocate_memory(&buffer_allocate_info, None)
-                .expect("Error allocating input buffer")
-        };
-
-        let buffer_ptr = unsafe {
-            device.device
-                .map_memory(
-                    input_buffer_memory,
-                    0,
-                    input_buffer_memory_req.size,
-                    vk::MemoryMapFlags::empty(),
-                )
-                .expect("Error mapping input buffer memory")
-        };
-
-        let mut buffer_align = unsafe {
-            ash::util::Align::new(
-                buffer_ptr,
-                std::mem::align_of::<Vertex>() as u64,
-                input_buffer_memory_req.size,
-            )
-        };
-        buffer_align.copy_from_slice(&vertices);
-        unsafe { device.device.unmap_memory(input_buffer_memory) }
-        
-        unsafe {
-            device.device
-                .bind_buffer_memory(input_buffer, input_buffer_memory, 0)
-                .expect("Error binding input buffer memory")
-        }
-
-        let buffer = Buffer::new(input_buffer, input_buffer_memory);
-        let index_buffer = get_index_buffer(&self.device_id, index_buffer_data);
-
-        VertexInput {buffer, index_buffer}
-    }
-
     pub fn create_pipeline_layout(&self, info: vk::PipelineLayoutCreateInfo) -> vk::PipelineLayout {
         let device = self.device_id.device();
 
@@ -169,7 +89,6 @@ impl<'a> Engine<'a> {
 
     pub fn present_idx(&self, present_complete_semaphore: vk::Semaphore) -> u32 {
         let device = self.device_id.device();
-        let instance = self.instance_id.instance();
         
         let (present_index, _) = unsafe {
             device.swapchain_loader
@@ -362,22 +281,13 @@ impl<'a> Engine<'a> {
         }
     }
 
-    pub fn cleanup(&self, obj: &dyn crate::gpuv2::Cleanup) {
+    pub fn cleanup(&self, obj: &dyn Cleanup) {
         obj.cleanup(self);
-    }
-
-    pub fn cleanup_buffer(&self, buffer: &Buffer) {
-        let device = self.device_id.device();
-
-        unsafe {
-            device.device.free_memory(buffer.memory, None);
-            device.device.destroy_buffer(buffer.buffer, None);
-        }
     }
 }
 
-impl crate::gpuv2::Cleanup for Engine<'_> {
-    fn cleanup(&self, engine: &Engine) {
+impl Cleanup for Engine<'_> {
+    fn cleanup(&self, _engine: &Engine) {
         let device = self.device_id.device();
 
         self.cleanup_fence(&self.setup_fence);
@@ -605,75 +515,6 @@ fn get_framebuffers(device_id: &DeviceID, depth_image_view: vk::ImageView, prese
             }
         })
         .collect()
-}
-
-fn get_index_buffer(device_id: &DeviceID, index_buffer_data: &[u32]) -> Buffer {
-    let device = device_id.device();
-
-    let index_buffer_info = vk::BufferCreateInfo::builder()
-        .size(std::mem::size_of_val(&index_buffer_data) as u64)
-        .usage(vk::BufferUsageFlags::INDEX_BUFFER)
-        .sharing_mode(vk::SharingMode::EXCLUSIVE);
-
-    let index_buffer = unsafe {
-        device.device
-        .create_buffer(&index_buffer_info, None)
-        .expect("Error creating index buffer")
-    };
-
-    let index_buffer_memory_req = unsafe {
-        device.device.get_buffer_memory_requirements(index_buffer)
-    };
-
-    let device_memory_properties = device.memory_properties();
-    let index_buffer_memory_index = find_memorytype_index(
-        &index_buffer_memory_req,
-        &device_memory_properties,
-        vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
-    )
-        .expect("Unable to find suitable memorytype for the index buffer.");
-
-
-    let index_allocate_info = vk::MemoryAllocateInfo {
-        allocation_size: index_buffer_memory_req.size,
-        memory_type_index: index_buffer_memory_index,
-        ..Default::default()
-    };
-
-    let index_buffer_memory = unsafe {
-        device.device
-            .allocate_memory(&index_allocate_info, None)
-            .expect("Error creating index buffer memory")
-    };
-
-    let index_ptr = unsafe {
-        device.device
-            .map_memory(
-                index_buffer_memory,
-                0,
-                index_buffer_memory_req.size,
-                vk::MemoryMapFlags::empty(),
-            )
-            .expect("Error mapping index buffer memory")
-    };
-
-    let mut index_slice = unsafe {
-        ash::util::Align::new(
-            index_ptr,
-            std::mem::align_of::<u32>() as u64,
-            index_buffer_memory_req.size,
-        )
-    };
-    index_slice.copy_from_slice(&index_buffer_data);
-
-    unsafe {
-        device.device.unmap_memory(index_buffer_memory);
-        device.device
-            .bind_buffer_memory(index_buffer, index_buffer_memory, 0)
-            .unwrap();
-    }
-
-    Buffer::new(index_buffer, index_buffer_memory)
 }
 
 fn find_memorytype_index(
