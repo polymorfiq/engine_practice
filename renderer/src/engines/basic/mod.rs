@@ -2,4 +2,4 @@
 mod macros;
 
 mod engine;
-pub use engine::{Engine, Vertex};
+pub use engine::Engine;

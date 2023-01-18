@@ -16,15 +16,16 @@ mod gpuv2;
 use gpuv2::{push_constants, shaders, viewport, VertexInput};
 
 mod engines;
-use engines::basic::{Engine, Vertex};
+use engines::basic::Engine;
+
+
+#[derive(Clone, Debug, Copy)]
+pub struct Vertex {
+    pub pos: [f32; 4],
+}
 
 #[macro_use]
 mod macros;
-
-struct Box {
-    pub pos: [f32; 3],
-    pub size: [f32; 2],
-}
 
 fn main() {
     //
@@ -64,18 +65,9 @@ fn main() {
     //
     let vertex_index_data = [0u32, 1, 2];
     let vertices = [
-        Vertex {
-            pos: [-1.0, 1.0, 0.0, 1.0],
-            color: [0.0, 1.0, 0.0, 1.0],
-        },
-        Vertex {
-            pos: [1.0, 1.0, 0.0, 1.0],
-            color: [0.0, 0.0, 1.0, 1.0],
-        },
-        Vertex {
-            pos: [0.0, -1.0, 0.0, 1.0],
-            color: [1.0, 0.0, 0.0, 1.0],
-        },
+        Vertex {pos: [-1.0, 1.0, 0.0, 1.0]},
+        Vertex {pos: [1.0, 1.0, 0.0, 1.0]},
+        Vertex {pos: [0.0, -1.0, 0.0, 1.0]},
     ];
 
     let vertex_input: VertexInput<Vertex, 3> = VertexInput::new(&device_props)
@@ -84,7 +76,6 @@ fn main() {
         .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
         .input_rate(vk::VertexInputRate::VERTEX)
         .attribute(0, offset_of!(Vertex, pos) as u32, 0, vk::Format::R32G32B32A32_SFLOAT)
-        .attribute(1, offset_of!(Vertex, color) as u32, 0, vk::Format::R32G32B32A32_SFLOAT)
         .load(&device_id.device().device, &vertices);
 
     let index_buffer: VertexInput<u32, 3> = VertexInput::new(&device_props)

@@ -18,12 +18,6 @@ pub struct Engine<'a> {
     pub setup_fence: vk::Fence
 }
 
-#[derive(Clone, Debug, Copy)]
-pub struct Vertex {
-    pub pos: [f32; 4],
-    pub color: [f32; 4],
-}
-
 impl<'a> Engine<'a> {
     pub fn new<'b>(system: &'b System<'b>, device_id: &DeviceID) -> Engine<'b> {
         let device = device_id.device();
