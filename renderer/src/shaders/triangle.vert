@@ -3,6 +3,11 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in vec4 pos;
+
+layout(binding = 0) uniform UniformBufferObject {
+    vec4 pos;
+} translation;
+
 layout (push_constant) uniform PushConstants {
     uint time;
 } pcs;
@@ -32,5 +37,5 @@ void main() {
         next_color = vec4(color.r, color.g, color.b, color.a);
     }
 
-    gl_Position = pos;
+    gl_Position = pos + translation.pos;
 }

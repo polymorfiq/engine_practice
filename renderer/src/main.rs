@@ -13,11 +13,10 @@ mod gpu;
 use gpu::System;
 
 mod gpuv2;
-use gpuv2::{push_constants, shaders, viewport, VertexInput};
+use gpuv2::{push_constants, shaders, viewport, Buffer, BufferSet};
 
 mod engines;
 use engines::basic::Engine;
-
 
 #[derive(Clone, Debug, Copy)]
 pub struct Vertex {
@@ -70,24 +69,42 @@ fn main() {
         Vertex {pos: [0.0, -1.0, 0.0, 1.0]},
     ];
 
-    let vertex_input: VertexInput<Vertex, 3> = VertexInput::new(&device_props)
+    let translation_input: Buffer<Vertex, 1> = Buffer::new(&device_props)
+        .binding(1)
+        .usage(vk::BufferUsageFlags::UNIFORM_BUFFER)
+        .sharing_mode(vk::SharingMode::EXCLUSIVE)
+        .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
+        .input_rate(vk::VertexInputRate::VERTEX)
+        .attribute(0, offset_of!(Vertex, pos) as u32, vk::Format::R32G32B32A32_SFLOAT)
+        .load(&device_id.device().device, &[
+            Vertex{pos: [0.5, -0.25, 0.0, 0.0]}
+        ]);
+
+    let vertex_input: Buffer<Vertex, 3> = Buffer::new(&device_props)
         .usage(vk::BufferUsageFlags::VERTEX_BUFFER)
         .sharing_mode(vk::SharingMode::EXCLUSIVE)
         .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
         .input_rate(vk::VertexInputRate::VERTEX)
-        .attribute(0, offset_of!(Vertex, pos) as u32, 0, vk::Format::R32G32B32A32_SFLOAT)
+        .attribute(0, offset_of!(Vertex, pos) as u32, vk::Format::R32G32B32A32_SFLOAT)
         .load(&device_id.device().device, &vertices);
 
-    let index_buffer: VertexInput<u32, 3> = VertexInput::new(&device_props)
+    let index_buffer: Buffer<u32, 3> = Buffer::new(&device_props)
         .usage(vk::BufferUsageFlags::INDEX_BUFFER)
         .sharing_mode(vk::SharingMode::EXCLUSIVE)
         .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
         .load(&device_id.device().device, &vertex_index_data);
 
-    let vertex_descs = [vertex_input.description()];
+    let vertex_descs = [
+        vertex_input.description()
+    ];
+
     let vertex_input_state_info = vk::PipelineVertexInputStateCreateInfo::builder()
         .vertex_attribute_descriptions(vertex_input.attributes())
         .vertex_binding_descriptions(&vertex_descs);
+
+    let uniform_buffers = BufferSet::new(vk::DescriptorType::UNIFORM_BUFFER)
+        .add(&translation_input)
+        .allocate(&device_id.device().device);
 
     //
     // Initialize Shaders
@@ -111,9 +128,28 @@ fn main() {
         .add::<u32>(0, vk::ShaderStageFlags::FRAGMENT | vk::ShaderStageFlags::VERTEX);
 
     let layout_info = vk::PipelineLayoutCreateInfo::builder()
+        .set_layouts(&[uniform_buffers.descriptor_set_layout()])
         .push_constant_ranges(push_constant_ranges.build())
         .build();
 
+    //
+    // Pre-Fill Uniform Buffers
+    //
+    let desc_set = vk::WriteDescriptorSet {
+        s_type: vk::StructureType::WRITE_DESCRIPTOR_SET,
+        dst_set: uniform_buffers.descriptor_sets()[0],
+        dst_binding: 0,
+        dst_array_element: 0,
+        descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
+        descriptor_count: 1,
+        p_buffer_info: &translation_input.descriptor_info(),
+        ..Default::default()
+    };
+
+    unsafe {
+        device_id.device().device.update_descriptor_sets(&[desc_set], &[])
+    }
+    
 
     //
     // Initialize Graphics Pipeline
@@ -171,6 +207,7 @@ fn main() {
     //
     // Render Loop
     //
+    let uniform_desc_sets = uniform_buffers.descriptor_sets();
     engine.render_loop(|device| {
         unsafe {
             device
@@ -218,6 +255,16 @@ fn main() {
                     &[vertex_input.buffer.unwrap()],
                     &[0],
                 );
+
+                dvc.cmd_bind_descriptor_sets(
+                    command_buffer, 
+                    vk::PipelineBindPoint::GRAPHICS,
+                    pipeline_layout,
+                    0,
+                    uniform_desc_sets.as_slice(),
+                    &[]
+                );
+
                 dvc.cmd_bind_index_buffer(
                     command_buffer,
                     index_buffer.buffer.unwrap(),
@@ -287,8 +334,10 @@ fn main() {
     engine.cleanup_sempahore(&present_complete_semaphore);
     engine.cleanup_sempahore(&rendering_complete_semaphore);
     engine.cleanup_fence(&render_fence);
+    engine.cleanup(&uniform_buffers);
     engine.cleanup(&index_buffer);
     engine.cleanup(&vertex_input);
+    engine.cleanup(&translation_input);
     engine.cleanup(&engine);
 
     println!("Cleaned up!!");

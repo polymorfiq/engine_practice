@@ -2,12 +2,12 @@ use super::DeviceProperties;
 use ash::vk;
 use std::marker::PhantomData;
 
-pub struct VertexInput<T, const N: usize> {
+pub struct Buffer<T, const N: usize> {
     memory_properties: vk::PhysicalDeviceMemoryProperties,
     sharing_mode: vk::SharingMode,
     memory_flags: vk::MemoryPropertyFlags,
     usage: vk::BufferUsageFlags,
-    binding: u32,
+    pub binding: u32,
     stride: u32,
     input_rate: vk::VertexInputRate,
     attributes: Vec<vk::VertexInputAttributeDescription>,
@@ -17,7 +17,7 @@ pub struct VertexInput<T, const N: usize> {
     phantom: PhantomData<T>
 }
 
-impl<T: Copy, const N: usize> VertexInput<T, N> {
+impl<T: Copy, const N: usize> Buffer<T, N> {
     pub fn new(device_props: &DeviceProperties) -> Self {
         let memory_properties = device_props.physical_memory;
 
@@ -34,6 +34,13 @@ impl<T: Copy, const N: usize> VertexInput<T, N> {
             device_memory: None,
             memory_req: None,
             phantom: PhantomData
+        }
+    }
+
+    pub fn binding(self, binding: u32) -> Self {
+        Self {
+            binding,
+            ..self
         }
     }
 
@@ -65,10 +72,10 @@ impl<T: Copy, const N: usize> VertexInput<T, N> {
         }
     }
 
-    pub fn attribute(self, location: u32, offset: u32, binding: u32, format: vk::Format) -> Self {
+    pub fn attribute(self, location: u32, offset: u32, format: vk::Format) -> Self {
         let desc = vk::VertexInputAttributeDescription {
             location,
-            binding,
+            binding: self.binding,
             format,
             offset,
         };
@@ -96,6 +103,14 @@ impl<T: Copy, const N: usize> VertexInput<T, N> {
             binding: self.binding,
             stride: self.stride,
             input_rate: self.input_rate,
+        }
+    }
+
+    pub fn descriptor_info(&self) -> vk::DescriptorBufferInfo {
+        vk::DescriptorBufferInfo {
+            buffer: self.buffer.unwrap(),
+            offset: 0,
+            range: std::mem::size_of::<T>() as u64
         }
     }
 
@@ -176,7 +191,7 @@ impl<T: Copy, const N: usize> VertexInput<T, N> {
     }
 }
 
-impl<T, const N: usize> super::Cleanup for VertexInput<T, N> {
+impl<T, const N: usize> super::Cleanup for Buffer<T, N> {
     fn cleanup(&self, engine: &crate::Engine) {
         let device = engine.device_id.device();
 
@@ -188,7 +203,6 @@ impl<T, const N: usize> super::Cleanup for VertexInput<T, N> {
         }
     }
 }
-
 
 fn find_memorytype_index(
     memory_req: &vk::MemoryRequirements,
