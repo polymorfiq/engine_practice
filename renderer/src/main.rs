@@ -21,7 +21,7 @@ use engines::basic::Engine;
 
 use winit::event::VirtualKeyCode;
 
-const ANIMATION_DURATION_MILLI: u32 = 250;
+const ANIMATION_DURATION_MILLI: u32 = 500;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vertex {
@@ -78,24 +78,24 @@ fn main() {
     //
     let vertex_index_data = [0u32, 1, 2];
     let vertices = [
-        Vertex {pos: [-1.0, 1.0, 0.0, 1.0]},
-        Vertex {pos: [1.0, 1.0, 0.0, 1.0]},
-        Vertex {pos: [0.0, -1.0, 0.0, 1.0]},
+        Vertex {pos: [-1.0, 1.0, 0.5, 1.0]},
+        Vertex {pos: [1.0, 1.0, 0.5, 1.0]},
+        Vertex {pos: [0.0, -1.0, 0.5, 1.0]},
     ];
 
     let mut transformation_data = RefCell::new([
         Animation{
             start_transform: [
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
             ],
             end_transform: [
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0]
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0]
             ],
             start_time: 0,
             end_time: 0,
@@ -254,7 +254,6 @@ fn main() {
                 let total_duration = transformation[0].end_time - transformation[0].start_time;
                 let curr_duration = anim_start - transformation[0].start_time;
                 let percentage_complete = (curr_duration as f32 / total_duration as f32).min(1.0).max(0.0);
-                println!("curr_duration: {:?}, percentage_complete: {:?}", curr_duration, percentage_complete);
                 for row in 0..transformation[0].end_transform.len() {
                     for col in 0..transformation[0].end_transform[0].len() {
                         let diff = transformation[0].end_transform[row][col] - transformation[0].start_transform[row][col];
@@ -264,23 +263,23 @@ fn main() {
 
                 match event {
                     key_pressed!(VirtualKeyCode::W) => {
-                        transformation[0].end_transform[0][0] = transformation[0].start_transform[0][0];
-                        transformation[0].end_transform[0][1] = transformation[0].start_transform[0][1] - 0.25;
+                        transformation[0].end_transform[3][0] = transformation[0].start_transform[3][0];
+                        transformation[0].end_transform[3][1] = transformation[0].start_transform[3][1] - 0.5;
                     },
 
                     key_pressed!(VirtualKeyCode::A) => {
-                        transformation[0].end_transform[0][1] = transformation[0].start_transform[0][1];
-                        transformation[0].end_transform[0][0] = transformation[0].start_transform[0][0] - 0.25;
+                        transformation[0].end_transform[3][1] = transformation[0].start_transform[3][1];
+                        transformation[0].end_transform[3][0] = transformation[0].start_transform[3][0] - 0.5;
                     },
 
                     key_pressed!(VirtualKeyCode::S) => {
-                        transformation[0].end_transform[0][0] = transformation[0].start_transform[0][0];
-                        transformation[0].end_transform[0][1] = transformation[0].start_transform[0][1] + 0.25;
+                        transformation[0].end_transform[3][0] = transformation[0].start_transform[3][0];
+                        transformation[0].end_transform[3][1] = transformation[0].start_transform[3][1] + 0.5;
                     },
                     
                     key_pressed!(VirtualKeyCode::D) => {
-                        transformation[0].end_transform[0][1] = transformation[0].start_transform[0][1];
-                        transformation[0].end_transform[0][0] = transformation[0].start_transform[0][0] + 0.25;
+                        transformation[0].end_transform[3][1] = transformation[0].start_transform[3][1];
+                        transformation[0].end_transform[3][0] = transformation[0].start_transform[3][0] + 0.5;
                     },
                     
                     _ => ()

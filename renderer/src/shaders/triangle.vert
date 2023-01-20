@@ -28,8 +28,18 @@ void main() {
         anim_percentage = 1.0;
     }
     
-    mat4 transform_offset = anim.end_transform - anim.start_transform;
-    gl_Position = (pos + anim.start_transform[0]) + (anim_percentage * transform_offset[0]);
+    mat4 end_anim_offset = anim.end_transform - anim.start_transform;
+    mat4 curr_anim_offset = (anim_percentage * end_anim_offset);
+    mat4 curr_transform = anim.start_transform + curr_anim_offset;
+    // float wc = pos[2];
+    // gl_Position = (curr_transform * pos) / wc;
+    // mat4 curr_transform = mat4(
+    //     1.0, 0.0, 0.0, 0.0,
+    //     0.0, 1.0, 0.0, 0.0,
+    //     0.0, 0.0, 1.0, 0.0,
+    //     0.0, 0.0, 0.0, 1.0
+    // );
+    gl_Position = curr_transform * pos;
 
     // Calculate color of vertex, in animation based on time
     float color_transform = mod(pcs.time, 3000.0);
