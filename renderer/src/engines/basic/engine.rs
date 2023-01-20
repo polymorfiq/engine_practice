@@ -74,7 +74,8 @@ impl<'a> Engine<'a> {
             render(&self.device_id.device().device, *curr_time);
             *curr_time = std::time::SystemTime::now();
         }, |e| {
-            let mut curr_time = world_time.borrow();
+            let mut curr_time = world_time.borrow_mut();
+            *curr_time = std::time::SystemTime::now();
             handle_event(&self.device_id.device().device, e, *curr_time);
         })
     }

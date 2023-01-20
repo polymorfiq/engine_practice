@@ -34,6 +34,7 @@ pub struct Animation {
     pub end_transform: [[f32; 4]; 4],
     pub start_time: u32,
     pub end_time: u32,
+    pub copied: bool
 }
 
 #[macro_use]
@@ -97,7 +98,8 @@ fn main() {
                 [0.0, 0.0, 0.0, 0.0]
             ],
             start_time: 0,
-            end_time: 10000
+            end_time: 0,
+            copied: true
         }
     ]);
     
@@ -280,14 +282,13 @@ fn main() {
                         transformation[0].end_transform[0][1] = transformation[0].start_transform[0][1];
                         transformation[0].end_transform[0][0] = transformation[0].start_transform[0][0] + 0.25;
                     },
-                
                     
                     _ => ()
                 }
                 
                 transformation[0].start_time = anim_start;
                 transformation[0].end_time = anim_start + ANIMATION_DURATION_MILLI;
-                transformation_buffer.copy(device, &*transformation);
+                transformation[0].copied = false;
             },
 
             _ => ()
@@ -319,6 +320,12 @@ fn main() {
             .framebuffer(engine.framebuffers[present_idx as usize])
             .render_area(surface_resolution.into())
             .clear_values(&clear_values);
+
+        let mut transformation = transformation_data.borrow_mut();
+        if (!transformation[0].copied) {
+            transformation[0].copied = true;
+            transformation_buffer.copy(&device.device, &*transformation);
+        }
 
         engine.record_command_buffer(draw_command_buffer, |dvc, command_buffer| {
             unsafe {
