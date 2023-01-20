@@ -6,6 +6,7 @@ extern crate winit;
 use ash::vk;
 use std::ffi::CString;
 
+#[macro_use]
 mod window;
 use window::Window;
 
@@ -17,6 +18,9 @@ use gpuv2::{push_constants, shaders, viewport, Buffer, BufferSet};
 
 mod engines;
 use engines::basic::Engine;
+
+use winit::event::VirtualKeyCode;
+
 
 #[derive(Clone, Debug, Copy)]
 pub struct Vertex {
@@ -70,7 +74,7 @@ fn main() {
     ];
 
     let mut translation_data = [
-        Vertex{pos: [0.0, -0.25, 0.0, 0.0]}
+        Vertex{pos: [0.0, 0.0, 0.0, 0.0]}
     ];
     
     let translation_input: Buffer<Vertex, 1> = Buffer::new(&device_props)
@@ -210,7 +214,34 @@ fn main() {
     // Render Loop
     //
     let uniform_desc_sets = uniform_buffers.descriptor_sets();
-    engine.render_loop(|device| {
+
+    let handle_event = (|device: &ash::Device, event: winit::event::Event<()>| {
+        match event {
+            key_pressed!(VirtualKeyCode::W) => {
+                translation_data[0].pos[1] = translation_data[0].pos[1] - 0.25;
+                translation_input.copy(device, &translation_data);
+            },
+
+            key_pressed!(VirtualKeyCode::A) => {
+                translation_data[0].pos[0] = translation_data[0].pos[0] - 0.25;
+                translation_input.copy(device, &translation_data);
+            },
+
+            key_pressed!(VirtualKeyCode::S) => {
+                translation_data[0].pos[1] = translation_data[0].pos[1] + 0.25;
+                translation_input.copy(device, &translation_data);
+            },
+
+            key_pressed!(VirtualKeyCode::D) => {
+                translation_data[0].pos[0] = translation_data[0].pos[0] + 0.25;
+                translation_input.copy(device, &translation_data);
+            },
+
+            _ => ()
+        }
+    });
+
+    let render_loop = (|device: &ash::Device| {
         unsafe {
             device
                 .wait_for_fences(&[render_fence], true, std::u64::MAX)
@@ -220,9 +251,6 @@ fn main() {
                 .reset_fences(&[render_fence])
                 .expect("Reset fences failed.");
         }
-
-        translation_data[0].pos[0] = translation_data[0].pos[0] + 0.01;
-        translation_input.copy(device, &translation_data);
 
         let elapsed = start_time.elapsed().unwrap();
         let all_push_constants = [elapsed.as_millis() as u32];
@@ -329,6 +357,8 @@ fn main() {
         }
 
     });
+
+    engine.render_loop(render_loop, handle_event);
 
     engine.wait_idle();
     

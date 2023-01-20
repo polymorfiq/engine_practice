@@ -6,11 +6,11 @@ macro_rules! window_event {
 
 macro_rules! key_pressed {
     ($key:pat) => {
-        Event::WindowEvent { window_id: _, event: 
-            WindowEvent::KeyboardInput {
+        winit::event::Event::WindowEvent { window_id: _, event: 
+            winit::event::WindowEvent::KeyboardInput {
                 input:
-                    KeyboardInput {
-                        state: ElementState::Pressed,
+                    winit::event::KeyboardInput {
+                        state: winit::event::ElementState::Pressed,
                         virtual_keycode: Some($key),
                         ..
                     },

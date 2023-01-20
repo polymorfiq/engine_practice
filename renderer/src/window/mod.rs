@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use winit::{
     dpi::LogicalSize,
-    event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
+    event::{Event, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     platform::run_return::EventLoopExtRunReturn,
     window::WindowBuilder,
@@ -9,7 +9,7 @@ use winit::{
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 
 #[macro_use]
-mod macros;
+pub mod macros;
 
 pub struct Window {
     window: winit::window::Window,
@@ -40,7 +40,7 @@ impl Window {
         }
     }
 
-    pub fn handle_events<F: FnMut()>(&self, mut f: F) {
+    pub fn handle_events<R: FnMut(), E: FnMut(Event<()>)>(&self, mut render: R, mut handle_event: E) {
         self.event_loop
             .borrow_mut()
             .run_return(|event, _, control_flow| {
@@ -52,8 +52,8 @@ impl Window {
                     key_pressed!(VirtualKeyCode::Escape) =>
                         *control_flow = ControlFlow::Exit,
                         
-                    Event::MainEventsCleared => f(),
-                    _ => (),
+                    Event::MainEventsCleared => render(),
+                    e => handle_event(e),
                 }
             });
     }

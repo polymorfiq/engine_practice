@@ -65,9 +65,11 @@ impl<'a> Engine<'a> {
         }
     }
 
-    pub fn render_loop<F: FnMut(&ash::Device) -> ()>(&self, mut f: F) {
+    pub fn render_loop<R: FnMut(&ash::Device), E: FnMut(&ash::Device, winit::event::Event<()>)>(&self, mut render: R, mut handle_event: E) {
         self.instance_id.instance().window.handle_events(||{
-            f(&self.device_id.device().device)
+            render(&self.device_id.device().device)
+        }, |e| {
+            handle_event(&self.device_id.device().device, e)
         })
     }
 
