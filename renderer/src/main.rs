@@ -4,7 +4,7 @@ extern crate shaderc;
 extern crate winit;
 
 use ash::vk;
-use std::ffi::CString;
+use std::{ffi::CString, cell::RefCell};
 
 #[macro_use]
 mod window;
@@ -21,10 +21,19 @@ use engines::basic::Engine;
 
 use winit::event::VirtualKeyCode;
 
+const ANIMATION_DURATION_MILLI: u32 = 250;
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Copy, Clone, Debug)]
 pub struct Vertex {
     pub pos: [f32; 4],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Animation {
+    pub start_transform: [[f32; 4]; 4],
+    pub end_transform: [[f32; 4]; 4],
+    pub start_time: u32,
+    pub end_time: u32,
 }
 
 #[macro_use]
@@ -73,18 +82,36 @@ fn main() {
         Vertex {pos: [0.0, -1.0, 0.0, 1.0]},
     ];
 
-    let mut translation_data = [
-        Vertex{pos: [0.0, 0.0, 0.0, 0.0]}
-    ];
+    let mut transformation_data = RefCell::new([
+        Animation{
+            start_transform: [
+                [0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+            ],
+            end_transform: [
+                [0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0]
+            ],
+            start_time: 0,
+            end_time: 10000
+        }
+    ]);
     
-    let translation_input: Buffer<Vertex, 1> = Buffer::new(&device_props)
+    let transformation_buffer: Buffer<Animation, 1> = Buffer::new(&device_props)
         .binding(1)
         .usage(vk::BufferUsageFlags::UNIFORM_BUFFER)
         .sharing_mode(vk::SharingMode::EXCLUSIVE)
         .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
         .input_rate(vk::VertexInputRate::VERTEX)
-        .attribute(0, offset_of!(Vertex, pos) as u32, vk::Format::R32G32B32A32_SFLOAT)
-        .load(&device_id.device().device, &translation_data);
+        .attribute(0, offset_of!(Animation, start_transform) as u32, vk::Format::ASTC_4X4_SFLOAT_BLOCK)
+        .attribute(1, offset_of!(Animation, end_transform) as u32, vk::Format::ASTC_4X4_SFLOAT_BLOCK)
+        .attribute(2, offset_of!(Animation, start_time) as u32, vk::Format::R32_UINT)
+        .attribute(3, offset_of!(Animation, end_time) as u32, vk::Format::R32_UINT)
+        .load(&device_id.device().device, &*transformation_data.borrow());
 
     let vertex_input: Buffer<Vertex, 3> = Buffer::new(&device_props)
         .usage(vk::BufferUsageFlags::VERTEX_BUFFER)
@@ -109,7 +136,7 @@ fn main() {
         .vertex_binding_descriptions(&vertex_descs);
 
     let uniform_buffers = BufferSet::new(vk::DescriptorType::UNIFORM_BUFFER)
-        .add(&translation_input)
+        .add(&transformation_buffer)
         .allocate(&device_id.device().device);
 
     //
@@ -148,7 +175,7 @@ fn main() {
         dst_array_element: 0,
         descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
         descriptor_count: 1,
-        p_buffer_info: &translation_input.descriptor_info(),
+        p_buffer_info: &transformation_buffer.descriptor_info(),
         ..Default::default()
     };
 
@@ -215,33 +242,59 @@ fn main() {
     //
     let uniform_desc_sets = uniform_buffers.descriptor_sets();
 
-    let handle_event = (|device: &ash::Device, event: winit::event::Event<()>| {
+    let handle_event = (|device: &ash::Device, event: winit::event::Event<()>, curr_time: std::time::SystemTime| {
+        let anim_start = curr_time.duration_since(start_time).unwrap().as_millis() as u32;
         match event {
-            key_pressed!(VirtualKeyCode::W) => {
-                translation_data[0].pos[1] = translation_data[0].pos[1] - 0.25;
-                translation_input.copy(device, &translation_data);
-            },
+            key_pressed!(VirtualKeyCode::W) | key_pressed!(VirtualKeyCode::A) | key_pressed!(VirtualKeyCode::S) | key_pressed!(VirtualKeyCode::D) => {
+                let mut transformation = transformation_data.borrow_mut();
 
-            key_pressed!(VirtualKeyCode::A) => {
-                translation_data[0].pos[0] = translation_data[0].pos[0] - 0.25;
-                translation_input.copy(device, &translation_data);
-            },
+                // Set start_transform to current visible transform to not jump backwards upon changing endpoint
+                let total_duration = transformation[0].end_time - transformation[0].start_time;
+                let curr_duration = anim_start - transformation[0].start_time;
+                let percentage_complete = (curr_duration as f32 / total_duration as f32).min(1.0).max(0.0);
+                println!("curr_duration: {:?}, percentage_complete: {:?}", curr_duration, percentage_complete);
+                for row in 0..transformation[0].end_transform.len() {
+                    for col in 0..transformation[0].end_transform[0].len() {
+                        let diff = transformation[0].end_transform[row][col] - transformation[0].start_transform[row][col];
+                        transformation[0].start_transform[row][col] = transformation[0].start_transform[row][col] + (diff * percentage_complete);
+                    }
+                }
 
-            key_pressed!(VirtualKeyCode::S) => {
-                translation_data[0].pos[1] = translation_data[0].pos[1] + 0.25;
-                translation_input.copy(device, &translation_data);
-            },
+                match event {
+                    key_pressed!(VirtualKeyCode::W) => {
+                        transformation[0].end_transform[0][0] = transformation[0].start_transform[0][0];
+                        transformation[0].end_transform[0][1] = transformation[0].start_transform[0][1] - 0.25;
+                    },
 
-            key_pressed!(VirtualKeyCode::D) => {
-                translation_data[0].pos[0] = translation_data[0].pos[0] + 0.25;
-                translation_input.copy(device, &translation_data);
+                    key_pressed!(VirtualKeyCode::A) => {
+                        transformation[0].end_transform[0][1] = transformation[0].start_transform[0][1];
+                        transformation[0].end_transform[0][0] = transformation[0].start_transform[0][0] - 0.25;
+                    },
+
+                    key_pressed!(VirtualKeyCode::S) => {
+                        transformation[0].end_transform[0][0] = transformation[0].start_transform[0][0];
+                        transformation[0].end_transform[0][1] = transformation[0].start_transform[0][1] + 0.25;
+                    },
+                    
+                    key_pressed!(VirtualKeyCode::D) => {
+                        transformation[0].end_transform[0][1] = transformation[0].start_transform[0][1];
+                        transformation[0].end_transform[0][0] = transformation[0].start_transform[0][0] + 0.25;
+                    },
+                
+                    
+                    _ => ()
+                }
+                
+                transformation[0].start_time = anim_start;
+                transformation[0].end_time = anim_start + ANIMATION_DURATION_MILLI;
+                transformation_buffer.copy(device, &*transformation);
             },
 
             _ => ()
         }
     });
 
-    let render_loop = (|device: &ash::Device| {
+    let render_loop = (|device: &ash::Device, curr_time: std::time::SystemTime| {
         unsafe {
             device
                 .wait_for_fences(&[render_fence], true, std::u64::MAX)
@@ -252,8 +305,8 @@ fn main() {
                 .expect("Reset fences failed.");
         }
 
-        let elapsed = start_time.elapsed().unwrap();
-        let all_push_constants = [elapsed.as_millis() as u32];
+        let elapsed = curr_time.duration_since(start_time).unwrap().as_millis() as u32;
+        let all_push_constants = [elapsed];
         let (_, push_constant_bytes, _) = unsafe {
             all_push_constants.as_slice().align_to::<u8>()
         };
@@ -372,7 +425,7 @@ fn main() {
     engine.cleanup(&uniform_buffers);
     engine.cleanup(&index_buffer);
     engine.cleanup(&vertex_input);
-    engine.cleanup(&translation_input);
+    engine.cleanup(&transformation_buffer);
     engine.cleanup(&engine);
 
     println!("Cleaned up!!");

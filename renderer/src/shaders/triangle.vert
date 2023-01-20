@@ -5,8 +5,11 @@
 layout (location = 0) in vec4 pos;
 
 layout(binding = 0) uniform UniformBufferObject {
-    vec4 pos;
-} translation;
+    mat4 start_transform;
+    mat4 end_transform;
+    uint start_time;
+    uint end_time;
+} anim;
 
 layout (push_constant) uniform PushConstants {
     uint time;
@@ -16,8 +19,20 @@ layout (push_constant) uniform PushConstants {
 layout (location = 0) out vec4 curr_color;
 layout (location = 1) out vec4 next_color;
 void main() {
-    float color_transform = mod(pcs.time, 3000.0);
 
+    // Calculate position of vertex, in animation
+    uint total_duration = anim.end_time - anim.start_time;
+    uint curr_duration = pcs.time - anim.start_time;
+    float anim_percentage = max(min(1.0, float(curr_duration) / float(total_duration)), 0.0);
+    if (total_duration == 0) {
+        anim_percentage = 1.0;
+    }
+    
+    mat4 transform_offset = anim.end_transform - anim.start_transform;
+    gl_Position = (pos + anim.start_transform[0]) + (anim_percentage * transform_offset[0]);
+
+    // Calculate color of vertex, in animation based on time
+    float color_transform = mod(pcs.time, 3000.0);
     vec4 color = vec4(1.0, 0.0, 0.0, 1.0);
     if(pos.x == -1.0) {
         color = vec4(0.0, 1.0, 0.0, 1.0);
@@ -36,6 +51,4 @@ void main() {
         curr_color = vec4(color.g, color.b, color.r, color.a);
         next_color = vec4(color.r, color.g, color.b, color.a);
     }
-
-    gl_Position = pos + translation.pos;
 }

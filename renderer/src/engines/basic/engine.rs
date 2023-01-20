@@ -2,6 +2,7 @@ use crate::gpu::System;
 use crate::gpu::ids::{DeviceID, InstanceID, SurfaceID};
 use crate::gpuv2::Cleanup;
 use ash::vk;
+use std::cell::RefCell;
 
 pub struct Engine<'a> {
     pub system: &'a System<'a>,
@@ -65,11 +66,16 @@ impl<'a> Engine<'a> {
         }
     }
 
-    pub fn render_loop<R: FnMut(&ash::Device), E: FnMut(&ash::Device, winit::event::Event<()>)>(&self, mut render: R, mut handle_event: E) {
+    pub fn render_loop<R: FnMut(&ash::Device, std::time::SystemTime), E: FnMut(&ash::Device, winit::event::Event<()>, std::time::SystemTime)>(&self, mut render: R, mut handle_event: E) {
+        let mut world_time = RefCell::new(std::time::SystemTime::now());
+
         self.instance_id.instance().window.handle_events(||{
-            render(&self.device_id.device().device)
+            let mut curr_time = world_time.borrow_mut();
+            render(&self.device_id.device().device, *curr_time);
+            *curr_time = std::time::SystemTime::now();
         }, |e| {
-            handle_event(&self.device_id.device().device, e)
+            let mut curr_time = world_time.borrow();
+            handle_event(&self.device_id.device().device, e, *curr_time);
         })
     }
 
