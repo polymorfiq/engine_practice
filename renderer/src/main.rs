@@ -69,6 +69,10 @@ fn main() {
         Vertex {pos: [0.0, -1.0, 0.0, 1.0]},
     ];
 
+    let mut translation_data = [
+        Vertex{pos: [0.0, -0.25, 0.0, 0.0]}
+    ];
+    
     let translation_input: Buffer<Vertex, 1> = Buffer::new(&device_props)
         .binding(1)
         .usage(vk::BufferUsageFlags::UNIFORM_BUFFER)
@@ -76,9 +80,7 @@ fn main() {
         .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
         .input_rate(vk::VertexInputRate::VERTEX)
         .attribute(0, offset_of!(Vertex, pos) as u32, vk::Format::R32G32B32A32_SFLOAT)
-        .load(&device_id.device().device, &[
-            Vertex{pos: [0.5, -0.25, 0.0, 0.0]}
-        ]);
+        .load(&device_id.device().device, &translation_data);
 
     let vertex_input: Buffer<Vertex, 3> = Buffer::new(&device_props)
         .usage(vk::BufferUsageFlags::VERTEX_BUFFER)
@@ -218,6 +220,9 @@ fn main() {
                 .reset_fences(&[render_fence])
                 .expect("Reset fences failed.");
         }
+
+        translation_data[0].pos[0] = translation_data[0].pos[0] + 0.01;
+        translation_input.copy(device, &translation_data);
 
         let elapsed = start_time.elapsed().unwrap();
         let all_push_constants = [elapsed.as_millis() as u32];

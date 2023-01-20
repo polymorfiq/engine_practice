@@ -40,7 +40,7 @@ impl Window {
         }
     }
 
-    pub fn handle_events<F: Fn()>(&self, f: F) {
+    pub fn handle_events<F: FnMut()>(&self, mut f: F) {
         self.event_loop
             .borrow_mut()
             .run_return(|event, _, control_flow| {
