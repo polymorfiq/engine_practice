@@ -5,6 +5,7 @@ extern crate winit;
 
 use ash::vk;
 use std::{ffi::CString, cell::RefCell};
+use linalg::Matrix;
 
 #[macro_use]
 mod window;
@@ -26,6 +27,11 @@ const ANIMATION_DURATION_MILLI: u32 = 500;
 #[derive(Copy, Clone, Debug)]
 pub struct Vertex {
     pub pos: [f32; 4],
+}
+
+pub struct Transformation {
+    start: Matrix<f32, 4, 4>,
+    end: Matrix<f32, 4, 4>
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -82,6 +88,21 @@ fn main() {
         Vertex {pos: [1.0, 1.0, 0.5, 1.0]},
         Vertex {pos: [0.0, -1.0, 0.5, 1.0]},
     ];
+
+    let mut transformation = Transformation {
+        start: Matrix::new([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ]),
+        end: Matrix::new([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ]),
+    };
 
     let mut transformation_data = RefCell::new([
         Animation{
@@ -244,50 +265,114 @@ fn main() {
     //
     let uniform_desc_sets = uniform_buffers.descriptor_sets();
 
+    let mut shift_pressed = false;
     let handle_event = (|device: &ash::Device, event: winit::event::Event<()>, curr_time: std::time::SystemTime| {
         let anim_start = curr_time.duration_since(start_time).unwrap().as_millis() as u32;
         match event {
+            key_pressed!(VirtualKeyCode::LShift) => shift_pressed = true,
+            key_released!(VirtualKeyCode::LShift) => shift_pressed = false,
+
             key_pressed!(VirtualKeyCode::W) | key_pressed!(VirtualKeyCode::A) | key_pressed!(VirtualKeyCode::S) | key_pressed!(VirtualKeyCode::D) => {
-                let mut transformation = transformation_data.borrow_mut();
-
                 // Set start_transform to current visible transform to not jump backwards upon changing endpoint
-                let total_duration = transformation[0].end_time - transformation[0].start_time;
-                let curr_duration = anim_start - transformation[0].start_time;
+                let mut transformation_data = transformation_data.borrow_mut();
+                let total_duration = transformation_data[0].end_time - transformation_data[0].start_time;
+                let curr_duration = anim_start - transformation_data[0].start_time;
                 let percentage_complete = (curr_duration as f32 / total_duration as f32).min(1.0).max(0.0);
-                for row in 0..transformation[0].end_transform.len() {
-                    for col in 0..transformation[0].end_transform[0].len() {
-                        let diff = transformation[0].end_transform[row][col] - transformation[0].start_transform[row][col];
-                        transformation[0].start_transform[row][col] = transformation[0].start_transform[row][col] + (diff * percentage_complete);
+                let diff = transformation.end - transformation.start;
+                let curr_offset = diff * percentage_complete;
+
+                transformation.start = transformation.start + curr_offset;
+
+                let matrix_diff: Matrix<f32, 4, 4> = match event {
+                    key_pressed!(VirtualKeyCode::W) if shift_pressed => {
+                        Matrix::new([
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                        ])
                     }
-                }
-
-                match event {
-                    key_pressed!(VirtualKeyCode::W) => {
-                        transformation[0].end_transform[3][0] = transformation[0].start_transform[3][0];
-                        transformation[0].end_transform[3][1] = transformation[0].start_transform[3][1] - 0.5;
-                    },
-
-                    key_pressed!(VirtualKeyCode::A) => {
-                        transformation[0].end_transform[3][1] = transformation[0].start_transform[3][1];
-                        transformation[0].end_transform[3][0] = transformation[0].start_transform[3][0] - 0.5;
-                    },
-
-                    key_pressed!(VirtualKeyCode::S) => {
-                        transformation[0].end_transform[3][0] = transformation[0].start_transform[3][0];
-                        transformation[0].end_transform[3][1] = transformation[0].start_transform[3][1] + 0.5;
-                    },
                     
-                    key_pressed!(VirtualKeyCode::D) => {
-                        transformation[0].end_transform[3][1] = transformation[0].start_transform[3][1];
-                        transformation[0].end_transform[3][0] = transformation[0].start_transform[3][0] + 0.5;
-                    },
+                    key_pressed!(VirtualKeyCode::A) if shift_pressed => {
+                        Matrix::new([
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                        ])
+                    }
+
+                    key_pressed!(VirtualKeyCode::S) if shift_pressed => {
+                        Matrix::new([
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                        ])
+                    }
+
+                    key_pressed!(VirtualKeyCode::D) if shift_pressed => {
+                        Matrix::new([
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                        ])
+                    }
+
+                    key_pressed!(VirtualKeyCode::W) if !shift_pressed => {
+                        Matrix::new([
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, -0.5, 0.0, 0.0],
+                        ])
+                    }
                     
-                    _ => ()
-                }
-                
-                transformation[0].start_time = anim_start;
-                transformation[0].end_time = anim_start + ANIMATION_DURATION_MILLI;
-                transformation[0].copied = false;
+                    key_pressed!(VirtualKeyCode::A) if !shift_pressed => {
+                        Matrix::new([
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [-0.5, 0.0, 0.0, 0.0],
+                        ])
+                    }
+
+                    key_pressed!(VirtualKeyCode::S) if !shift_pressed => {
+                        Matrix::new([
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.5, 0.0, 0.0],
+                        ])
+                    }
+
+                    key_pressed!(VirtualKeyCode::D) if !shift_pressed => {
+                        Matrix::new([
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.5, 0.0, 0.0, 0.0],
+                        ])
+                    },
+
+                    _ => {
+                        Matrix::new([
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.0, 0.0],
+                        ])
+                    }
+                };
+
+                transformation.end = transformation.start + matrix_diff;
+
+                transformation_data[0].start_transform = transformation.start.row_major();
+                transformation_data[0].end_transform = transformation.end.row_major();
+                transformation_data[0].start_time = anim_start;
+                transformation_data[0].end_time = anim_start + ANIMATION_DURATION_MILLI;
+                transformation_data[0].copied = false;
             },
 
             _ => ()
@@ -320,10 +405,10 @@ fn main() {
             .render_area(surface_resolution.into())
             .clear_values(&clear_values);
 
-        let mut transformation = transformation_data.borrow_mut();
-        if (!transformation[0].copied) {
-            transformation[0].copied = true;
-            transformation_buffer.copy(&device.device, &*transformation);
+        let mut transformation_data = transformation_data.borrow_mut();
+        if (!transformation_data[0].copied) {
+            transformation_data[0].copied = true;
+            transformation_buffer.copy(&device.device, &*transformation_data);
         }
 
         engine.record_command_buffer(draw_command_buffer, |dvc, command_buffer| {

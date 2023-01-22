@@ -19,3 +19,19 @@ macro_rules! key_pressed {
         }
     }
 }
+
+macro_rules! key_released {
+    ($key:pat) => {
+        winit::event::Event::WindowEvent { window_id: _, event: 
+            winit::event::WindowEvent::KeyboardInput {
+                input:
+                    winit::event::KeyboardInput {
+                        state: winit::event::ElementState::Released,
+                        virtual_keycode: Some($key),
+                        ..
+                    },
+                ..
+            }
+        }
+    }
+}

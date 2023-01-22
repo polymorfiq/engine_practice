@@ -11,3 +11,5 @@ winit = "0.27.5"
 ash-window = "0.12.0"
 raw-window-handle = "0.5.0"
 shaderc = "0.8.1"
+
+linalg = { path = "../linalg" }
