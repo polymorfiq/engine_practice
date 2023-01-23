@@ -29,9 +29,122 @@ pub struct Vertex {
     pub pos: [f32; 4],
 }
 
-pub struct Transformation {
-    start: Matrix<f32, 4, 4>,
-    end: Matrix<f32, 4, 4>
+#[derive(Copy, Clone, Debug)]
+pub struct ModelMatrix {
+    pub scale: (f32, f32, f32),
+    pub rotation: (f32, f32, f32),
+    pub translation: (f32, f32, f32)
+}
+
+impl ModelMatrix {
+    fn scale_matrix(&self) -> Matrix<f32, 4, 4> {
+        let (scale_x, scale_y, scale_z) = self.scale;
+
+        Matrix::new([
+            [scale_x, 0.0, 0.0, 0.0],
+            [0.0, scale_y, 0.0, 0.0],
+            [0.0, 0.0, scale_z, 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ])
+    }
+
+    fn translation_matrix(&self) -> Matrix<f32, 4, 4> {
+        let (x, y, z) = self.translation;
+
+        Matrix::new([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [x, y, z, 1.0]
+        ])
+    }
+
+    fn rotation_matrix(&self) -> Matrix<f32, 4, 4> {
+        let (r_x, r_y, r_z) = self.rotation;
+
+        let rot_x = Matrix::new([
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, r_x.cos(), r_x.sin(), 0.0],
+            [0.0, -r_x.sin(), r_x.cos(), 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ]);
+
+        let rot_y = Matrix::new([
+            [r_y.cos(), 0.0, -r_y.sin(), 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [r_y.sin(), 0.0, r_y.cos(), 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ]);
+
+        let rot_z = Matrix::new([
+            [r_z.cos(), -r_z.sin(), 0.0, 0.0],
+            [r_z.sin(), r_z.cos(), 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ]);
+
+        (rot_x * rot_y) * rot_z
+    }
+
+    pub fn matrix(&self) -> Matrix<f32, 4, 4> {
+        (self.rotation_matrix() * self.scale_matrix()) * self.translation_matrix()
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ModelTransformation {
+    start: ModelMatrix,
+    end: ModelMatrix
+}
+
+impl ModelTransformation {
+    fn at_percentage(&self, percentage: f32) -> Self {
+        if percentage == 0.0 {
+            Self{start: self.start, end: self.start}
+        } else if percentage == 1.0 {
+            Self{start: self.end, end: self.end}
+        } else {
+            let translation_diff = (
+                (self.end.translation.0 - self.start.translation.0) * percentage,
+                (self.end.translation.1 - self.start.translation.1) * percentage,
+                (self.end.translation.2 - self.start.translation.2) * percentage
+            );
+    
+            let scale_diff = (
+                (self.end.scale.0 - self.start.scale.0) * percentage,
+                (self.end.scale.1 - self.start.scale.1) * percentage,
+                (self.end.scale.2 - self.start.scale.2) * percentage
+            );
+    
+            let rot_diff = (
+                (self.end.rotation.0 - self.start.rotation.0) * percentage,
+                (self.end.rotation.1 - self.start.rotation.1) * percentage,
+                (self.end.rotation.2 - self.start.rotation.2) * percentage
+            );
+    
+            let new_matrix = ModelMatrix {
+                translation: (
+                    self.start.translation.0 + translation_diff.0,
+                    self.start.translation.1 + translation_diff.1,
+                    self.start.translation.2 + translation_diff.2,
+                ),
+    
+                scale: (
+                    self.start.scale.0 + scale_diff.0,
+                    self.start.scale.1 + scale_diff.1,
+                    self.start.scale.2 + scale_diff.2,
+                ),
+    
+                rotation: (
+                    self.start.rotation.0 + rot_diff.0,
+                    self.start.rotation.1 + rot_diff.1,
+                    self.start.rotation.2 + rot_diff.2,
+                ),
+            };
+
+            Self {start: new_matrix, end: new_matrix}
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -89,35 +202,21 @@ fn main() {
         Vertex {pos: [0.0, -1.0, 0.5, 1.0]},
     ];
 
-    let mut transformation = Transformation {
-        start: Matrix::new([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0]
-        ]),
-        end: Matrix::new([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0]
-        ]),
+    let model_matrix =  ModelMatrix {
+        scale: (2.0, 1.0, 1.0),
+        translation: (0.0, 0.0, 0.0),
+        rotation: (0.0, 0.0, 0.0)
     };
 
-    let mut transformation_data = RefCell::new([
+    let mut transformation = ModelTransformation {
+        start: model_matrix.clone(),
+        end: model_matrix.clone(),
+    };
+
+    let transformation_data = RefCell::new([
         Animation{
-            start_transform: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ],
-            end_transform: [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0]
-            ],
+            start_transform: model_matrix.matrix().row_major(),
+            end_transform: model_matrix.matrix().row_major(),
             start_time: 0,
             end_time: 0,
             copied: true
@@ -278,98 +377,71 @@ fn main() {
                 let total_duration = transformation_data[0].end_time - transformation_data[0].start_time;
                 let curr_duration = anim_start - transformation_data[0].start_time;
                 let percentage_complete = (curr_duration as f32 / total_duration as f32).min(1.0).max(0.0);
-                let diff = transformation.end - transformation.start;
-                let curr_offset = diff * percentage_complete;
+                let curr_pos = transformation.at_percentage(percentage_complete);
 
-                transformation.start = transformation.start + curr_offset;
+                transformation.start = curr_pos.start;
+                let mut translation_change = (0.0, 0.0, 0.0);
+                let mut scale_change = (0.0, 0.0, 0.0);
+                let mut rot_change = (0.0, 0.0, 0.0);
 
-                let matrix_diff: Matrix<f32, 4, 4> = match event {
+                match event {
                     key_pressed!(VirtualKeyCode::W) if shift_pressed => {
-                        Matrix::new([
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                        ])
+                        rot_change = (0.0, -0.5, 0.0);
                     }
                     
                     key_pressed!(VirtualKeyCode::A) if shift_pressed => {
-                        Matrix::new([
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                        ])
+                        rot_change = (-0.5, 0.0, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::S) if shift_pressed => {
-                        Matrix::new([
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                        ])
+                        rot_change = (0.0, 0.5, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::D) if shift_pressed => {
-                        Matrix::new([
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                        ])
+                        rot_change = (0.5, 0.0, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::W) if !shift_pressed => {
-                        Matrix::new([
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, -0.5, 0.0, 0.0],
-                        ])
+                        translation_change = (0.0, -0.5, 0.0);
                     }
                     
                     key_pressed!(VirtualKeyCode::A) if !shift_pressed => {
-                        Matrix::new([
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [-0.5, 0.0, 0.0, 0.0],
-                        ])
+                        translation_change = (-0.5, 0.0, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::S) if !shift_pressed => {
-                        Matrix::new([
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.5, 0.0, 0.0],
-                        ])
+                        translation_change = (0.0, 0.5, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::D) if !shift_pressed => {
-                        Matrix::new([
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.5, 0.0, 0.0, 0.0],
-                        ])
+                        translation_change = (0.5, 0.0, 0.0);
                     },
 
-                    _ => {
-                        Matrix::new([
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.0, 0.0],
-                        ])
-                    }
+                    _ => {}
                 };
 
-                transformation.end = transformation.start + matrix_diff;
+                transformation.end = ModelMatrix {
+                    translation: (
+                        transformation.start.translation.0 + translation_change.0,
+                        transformation.start.translation.1 + translation_change.1,
+                        transformation.start.translation.2 + translation_change.2,
+                    ),
+                    scale: (
+                        transformation.start.scale.0 + scale_change.0,
+                        transformation.start.scale.1 + scale_change.1,
+                        transformation.start.scale.2 + scale_change.2,
+                    ),
+                    rotation: (
+                        transformation.start.rotation.0 + rot_change.0,
+                        transformation.start.rotation.1 + rot_change.1,
+                        transformation.start.rotation.2 + rot_change.2,
+                    ),
+                };
 
-                transformation_data[0].start_transform = transformation.start.row_major();
-                transformation_data[0].end_transform = transformation.end.row_major();
+                transformation_data[0].start_transform = transformation.start.matrix().row_major();
+                transformation_data[0].end_transform = transformation.end.matrix().row_major();
+                println!("transformation.start: {:?}", transformation.start);
+                println!("transformation.end: {:?}", transformation.end);
                 transformation_data[0].start_time = anim_start;
                 transformation_data[0].end_time = anim_start + ANIMATION_DURATION_MILLI;
                 transformation_data[0].copied = false;

@@ -38,7 +38,13 @@ impl <T: Mobile, const M: usize, const N: usize> ops::Mul<Self> for Matrix<T, M,
     type Output = Self;
 
     fn mul(self, other: Self) -> Self {
-        gen_matrix(|m, n| *self.value_at(m, n) * *other.value_at(m, n))
+        gen_matrix(|m, n| {
+            let mut sum = T::zero();
+            for row in 0..other.rows() {
+                sum = sum + (*self.value_at(m, row) * *other.value_at(row, n));
+            }
+            sum
+        })
     }
 }
 

@@ -6,8 +6,8 @@ pub use matrix::Matrix;
 pub type Scalar<T> = Matrix<T, 1, 1>;
 pub type Vector<T, const L: usize> = Matrix<T, 1, L>;
 
-pub trait Mobile: Zero + Copy {}
-impl<T: Zero + Copy> Mobile for T {}
+pub trait Mobile: Zero + Copy + core::ops::Add<Output = Self> {}
+impl<T: Zero + Copy + core::ops::Add<Output = T>> Mobile for T {}
 
 pub trait Zero {
     fn zero() -> Self;
