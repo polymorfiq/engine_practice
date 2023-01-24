@@ -67,7 +67,7 @@ impl<'a> Engine<'a> {
     }
 
     pub fn render_loop<R: FnMut(&ash::Device, std::time::SystemTime), E: FnMut(&ash::Device, winit::event::Event<()>, std::time::SystemTime)>(&self, mut render: R, mut handle_event: E) {
-        let mut world_time = RefCell::new(std::time::SystemTime::now());
+        let world_time = RefCell::new(std::time::SystemTime::now());
 
         self.instance_id.instance().window.handle_events(||{
             let mut curr_time = world_time.borrow_mut();

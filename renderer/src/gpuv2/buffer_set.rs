@@ -40,14 +40,10 @@ impl BufferSet {
         self.descriptor_set_layout.unwrap()
     }
 
-    pub fn descriptor_type(&self) -> vk::DescriptorType {
-        self.descriptor_type
-    }
-
     pub fn allocate(self, dvc: &ash::Device) -> Self {
         let binding = vk::DescriptorSetLayoutBinding {
             binding: 0,
-            descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
+            descriptor_type: self.descriptor_type,
             descriptor_count: 1,
             stage_flags: vk::ShaderStageFlags::VERTEX,
             ..Default::default()

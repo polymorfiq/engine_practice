@@ -82,7 +82,6 @@ impl Device {
 
     pub fn surface_resolution(&self) -> vk::Extent2D {
         let caps = self.surface_capabilities();
-        let surface = self.surface_id.surface();
         let instance = self.instance_id.instance();
         match caps.current_extent.width {
             std::u32::MAX => vk::Extent2D {
@@ -157,39 +156,6 @@ impl Device {
                 .get_swapchain_images(swapchain)
                 .expect("Error getting swapchain images")
         }
-    }
-
-    pub fn present_image_views(&self, swapchain: vk::SwapchainKHR) -> Vec<vk::ImageView> {
-        let surface_format = self.surface_format();
-
-        self.present_images(swapchain)
-            .iter()
-            .map(|&image| {
-                let create_view_info = vk::ImageViewCreateInfo::builder()
-                    .view_type(vk::ImageViewType::TYPE_2D)
-                    .format(surface_format.format)
-                    .components(vk::ComponentMapping {
-                        r: vk::ComponentSwizzle::R,
-                        g: vk::ComponentSwizzle::G,
-                        b: vk::ComponentSwizzle::B,
-                        a: vk::ComponentSwizzle::A,
-                    })
-                    .subresource_range(vk::ImageSubresourceRange {
-                        aspect_mask: vk::ImageAspectFlags::COLOR,
-                        base_mip_level: 0,
-                        level_count: 1,
-                        base_array_layer: 0,
-                        layer_count: 1,
-                    })
-                    .image(image);
-
-                unsafe {
-                    self.device
-                        .create_image_view(&create_view_info, None)
-                        .expect("Error creating image view")
-                }
-            })
-            .collect()
     }
 
     pub fn memory_properties(&self) -> vk::PhysicalDeviceMemoryProperties {

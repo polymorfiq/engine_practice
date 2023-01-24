@@ -1,5 +1,6 @@
 
 extern crate ash;
+extern crate proc_macro;
 extern crate shaderc;
 extern crate winit;
 
@@ -23,6 +24,10 @@ use engines::basic::Engine;
 use winit::event::VirtualKeyCode;
 
 const ANIMATION_DURATION_MILLI: u32 = 500;
+const NUM_VERTICES: usize = 4;
+const NUM_INDICES: usize = 6;
+const MOVE_SPEED: f32 = 1.0;
+const ROT_SPEED: f32 = 0.5;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vertex {
@@ -83,7 +88,7 @@ impl ModelMatrix {
             [0.0, 0.0, 0.0, 1.0]
         ]);
 
-        (rot_x * rot_y) * rot_z
+        (rot_x + rot_y) + rot_z
     }
 
     pub fn matrix(&self) -> Matrix<f32, 4, 4> {
@@ -195,15 +200,16 @@ fn main() {
     //
     // Setup Shader Inputs
     //
-    let vertex_index_data = [0u32, 1, 2];
-    let vertices = [
-        Vertex {pos: [-1.0, 1.0, 0.5, 1.0]},
-        Vertex {pos: [1.0, 1.0, 0.5, 1.0]},
-        Vertex {pos: [0.0, -1.0, 0.5, 1.0]},
+    const vertex_index_data: [u32; NUM_INDICES] = [0, 1, 2, 1, 2, 3];
+    let vertices: [Vertex; NUM_VERTICES] = [
+        Vertex {pos: [-1.0, 1.0, 0.5, 0.5]},
+        Vertex {pos: [-1.0, -1.0, 0.5, 0.5]},
+        Vertex {pos: [1.0, 1.0, 0.5, 0.5]},
+        Vertex {pos: [1.0, -1.0, 0.5, 0.5]},
     ];
 
     let model_matrix =  ModelMatrix {
-        scale: (2.0, 1.0, 1.0),
+        scale: (1.0, 1.0, 1.0),
         translation: (0.0, 0.0, 0.0),
         rotation: (0.0, 0.0, 0.0)
     };
@@ -235,7 +241,7 @@ fn main() {
         .attribute(3, offset_of!(Animation, end_time) as u32, vk::Format::R32_UINT)
         .load(&device_id.device().device, &*transformation_data.borrow());
 
-    let vertex_input: Buffer<Vertex, 3> = Buffer::new(&device_props)
+    let vertex_input: Buffer<Vertex, NUM_VERTICES> = Buffer::new(&device_props)
         .usage(vk::BufferUsageFlags::VERTEX_BUFFER)
         .sharing_mode(vk::SharingMode::EXCLUSIVE)
         .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
@@ -243,7 +249,7 @@ fn main() {
         .attribute(0, offset_of!(Vertex, pos) as u32, vk::Format::R32G32B32A32_SFLOAT)
         .load(&device_id.device().device, &vertices);
 
-    let index_buffer: Buffer<u32, 3> = Buffer::new(&device_props)
+    let index_buffer: Buffer<u32, NUM_INDICES> = Buffer::new(&device_props)
         .usage(vk::BufferUsageFlags::INDEX_BUFFER)
         .sharing_mode(vk::SharingMode::EXCLUSIVE)
         .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
@@ -365,7 +371,7 @@ fn main() {
     let uniform_desc_sets = uniform_buffers.descriptor_sets();
 
     let mut shift_pressed = false;
-    let handle_event = (|device: &ash::Device, event: winit::event::Event<()>, curr_time: std::time::SystemTime| {
+    let handle_event = |_: &ash::Device, event: winit::event::Event<()>, curr_time: std::time::SystemTime| {
         let anim_start = curr_time.duration_since(start_time).unwrap().as_millis() as u32;
         match event {
             key_pressed!(VirtualKeyCode::LShift) => shift_pressed = true,
@@ -381,40 +387,40 @@ fn main() {
 
                 transformation.start = curr_pos.start;
                 let mut translation_change = (0.0, 0.0, 0.0);
-                let mut scale_change = (0.0, 0.0, 0.0);
+                let scale_change = (0.0, 0.0, 0.0);
                 let mut rot_change = (0.0, 0.0, 0.0);
 
                 match event {
                     key_pressed!(VirtualKeyCode::W) if shift_pressed => {
-                        rot_change = (0.0, -0.5, 0.0);
+                        rot_change = (-ROT_SPEED, 0.0, 0.0);
                     }
                     
                     key_pressed!(VirtualKeyCode::A) if shift_pressed => {
-                        rot_change = (-0.5, 0.0, 0.0);
+                        rot_change = (0.0, -ROT_SPEED, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::S) if shift_pressed => {
-                        rot_change = (0.0, 0.5, 0.0);
+                        rot_change = (ROT_SPEED, 0.0, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::D) if shift_pressed => {
-                        rot_change = (0.5, 0.0, 0.0);
+                        rot_change = (0.0, ROT_SPEED, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::W) if !shift_pressed => {
-                        translation_change = (0.0, -0.5, 0.0);
+                        translation_change = (0.0, -MOVE_SPEED, 0.0);
                     }
                     
                     key_pressed!(VirtualKeyCode::A) if !shift_pressed => {
-                        translation_change = (-0.5, 0.0, 0.0);
+                        translation_change = (-MOVE_SPEED, 0.0, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::S) if !shift_pressed => {
-                        translation_change = (0.0, 0.5, 0.0);
+                        translation_change = (0.0, MOVE_SPEED, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::D) if !shift_pressed => {
-                        translation_change = (0.5, 0.0, 0.0);
+                        translation_change = (MOVE_SPEED, 0.0, 0.0);
                     },
 
                     _ => {}
@@ -440,8 +446,6 @@ fn main() {
 
                 transformation_data[0].start_transform = transformation.start.matrix().row_major();
                 transformation_data[0].end_transform = transformation.end.matrix().row_major();
-                println!("transformation.start: {:?}", transformation.start);
-                println!("transformation.end: {:?}", transformation.end);
                 transformation_data[0].start_time = anim_start;
                 transformation_data[0].end_time = anim_start + ANIMATION_DURATION_MILLI;
                 transformation_data[0].copied = false;
@@ -449,9 +453,9 @@ fn main() {
 
             _ => ()
         }
-    });
+    };
 
-    let render_loop = (|device: &ash::Device, curr_time: std::time::SystemTime| {
+    let render_loop = |device: &ash::Device, curr_time: std::time::SystemTime| {
         unsafe {
             device
                 .wait_for_fences(&[render_fence], true, std::u64::MAX)
@@ -478,7 +482,7 @@ fn main() {
             .clear_values(&clear_values);
 
         let mut transformation_data = transformation_data.borrow_mut();
-        if (!transformation_data[0].copied) {
+        if !transformation_data[0].copied {
             transformation_data[0].copied = true;
             transformation_buffer.copy(&device.device, &*transformation_data);
         }
@@ -572,7 +576,7 @@ fn main() {
                 .expect("Error queueing present info");
         }
 
-    });
+    };
 
     engine.render_loop(render_loop, handle_event);
 
