@@ -27,11 +27,12 @@ const ANIMATION_DURATION_MILLI: u32 = 500;
 const NUM_VERTICES: usize = 4;
 const NUM_INDICES: usize = 6;
 const MOVE_SPEED: f32 = 1.0;
-const ROT_SPEED: f32 = 0.5;
+const ROT_SPEED: f32 = 0.3;
+const Z_SPEED: f32 = 0.5;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vertex {
-    pub pos: [f32; 4],
+    pub pos: [f32; 3],
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -56,11 +57,12 @@ impl ModelMatrix {
     fn translation_matrix(&self) -> Matrix<f32, 4, 4> {
         let (x, y, z) = self.translation;
 
+
         Matrix::new([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [x, y, z, 1.0]
+            [1.0, 0.0, 0.0, x],
+            [0.0, 1.0, 0.0, y],
+            [0.0, 0.0, 1.0, z],
+            [0.0, 0.0, 0.0, 1.0]
         ])
     }
 
@@ -69,30 +71,30 @@ impl ModelMatrix {
 
         let rot_x = Matrix::new([
             [1.0, 0.0, 0.0, 0.0],
-            [0.0, r_x.cos(), r_x.sin(), 0.0],
-            [0.0, -r_x.sin(), r_x.cos(), 0.0],
+            [0.0, r_x.cos(), -r_x.sin(), 0.0],
+            [0.0, r_x.sin(), r_x.cos(), 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ]);
 
         let rot_y = Matrix::new([
-            [r_y.cos(), 0.0, -r_y.sin(), 0.0],
+            [r_y.cos(), 0.0, r_y.sin(), 0.0],
             [0.0, 1.0, 0.0, 0.0],
-            [r_y.sin(), 0.0, r_y.cos(), 0.0],
+            [-r_y.sin(), 0.0, r_y.cos(), 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ]);
 
         let rot_z = Matrix::new([
-            [r_z.cos(), -r_z.sin(), 0.0, 0.0],
-            [r_z.sin(), r_z.cos(), 0.0, 0.0],
+            [r_z.cos(), r_z.sin(), 0.0, 0.0],
+            [-r_z.sin(), r_z.cos(), 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ]);
 
-        (rot_x + rot_y) + rot_z
+        rot_x + rot_y + rot_z
     }
 
     pub fn matrix(&self) -> Matrix<f32, 4, 4> {
-        (self.rotation_matrix() * self.scale_matrix()) * self.translation_matrix()
+        self.translation_matrix() * self.scale_matrix() * self.rotation_matrix()
     }
 }
 
@@ -202,14 +204,14 @@ fn main() {
     //
     const vertex_index_data: [u32; NUM_INDICES] = [0, 1, 2, 1, 2, 3];
     let vertices: [Vertex; NUM_VERTICES] = [
-        Vertex {pos: [-1.0, 1.0, 0.5, 0.5]},
-        Vertex {pos: [-1.0, -1.0, 0.5, 0.5]},
-        Vertex {pos: [1.0, 1.0, 0.5, 0.5]},
-        Vertex {pos: [1.0, -1.0, 0.5, 0.5]},
+        Vertex {pos: [-0.5, -0.5, 0.0]},
+        Vertex {pos: [-0.5, 0.5, 0.0]},
+        Vertex {pos: [0.5, -0.5, 0.0]},
+        Vertex {pos: [0.5, 0.5, 0.0]},
     ];
 
     let model_matrix =  ModelMatrix {
-        scale: (1.0, 1.0, 1.0),
+        scale: (0.5, 0.5, 1.0),
         translation: (0.0, 0.0, 0.0),
         rotation: (0.0, 0.0, 0.0)
     };
@@ -246,7 +248,7 @@ fn main() {
         .sharing_mode(vk::SharingMode::EXCLUSIVE)
         .memory_flags(vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT)
         .input_rate(vk::VertexInputRate::VERTEX)
-        .attribute(0, offset_of!(Vertex, pos) as u32, vk::Format::R32G32B32A32_SFLOAT)
+        .attribute(0, offset_of!(Vertex, pos) as u32, vk::Format::R32G32B32_SFLOAT)
         .load(&device_id.device().device, &vertices);
 
     let index_buffer: Buffer<u32, NUM_INDICES> = Buffer::new(&device_props)
@@ -392,7 +394,7 @@ fn main() {
 
                 match event {
                     key_pressed!(VirtualKeyCode::W) if shift_pressed => {
-                        rot_change = (-ROT_SPEED, 0.0, 0.0);
+                        translation_change = (0.0, 0.0, Z_SPEED);
                     }
                     
                     key_pressed!(VirtualKeyCode::A) if shift_pressed => {
@@ -400,7 +402,7 @@ fn main() {
                     }
 
                     key_pressed!(VirtualKeyCode::S) if shift_pressed => {
-                        rot_change = (ROT_SPEED, 0.0, 0.0);
+                        translation_change = (0.0, 0.0, -Z_SPEED);
                     }
 
                     key_pressed!(VirtualKeyCode::D) if shift_pressed => {
@@ -444,8 +446,10 @@ fn main() {
                     ),
                 };
 
-                transformation_data[0].start_transform = transformation.start.matrix().row_major();
-                transformation_data[0].end_transform = transformation.end.matrix().row_major();
+                println!("row_major: {:?}", transformation.start.matrix().row_major());
+
+                transformation_data[0].start_transform = transformation.start.matrix().col_major();
+                transformation_data[0].end_transform = transformation.end.matrix().col_major();
                 transformation_data[0].start_time = anim_start;
                 transformation_data[0].end_time = anim_start + ANIMATION_DURATION_MILLI;
                 transformation_data[0].copied = false;

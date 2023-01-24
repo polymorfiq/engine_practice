@@ -2,7 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec4 pos;
+layout (location = 0) in vec3 pos;
 
 layout(binding = 0) uniform UniformBufferObject {
     mat4 start_transform;
@@ -15,68 +15,23 @@ layout (push_constant) uniform PushConstants {
     uint time;
 } pcs;
 
-
-mat4 gen_ortho_matrix(float left, float right, float top, float bottom, float near, float far) {
-    return mat4(
-        2.0/(right-left),    0.0,     0.0,     -(right+left)/(right-left),
-        0.0,    2.0/(bottom-top),     0.0,     -(bottom+top)/(bottom-top),
-        0.0,    0.0,    1.0/(near-far),    near/(near-far),
-        0.0,  0.0,   0.0,     1.0
-    );
+mat4 PerspectiveMatrix(float l, float r, float t, float b, float n, float f) {
+    return transpose(mat4(
+        (2.0*n)/(r-l), 0.0, (r+l)/(r-l), 0.0,
+        0.0, (2.0*n)/(b-t), (b+t)/(b-t), 0.0,
+        0.0, 0.0, n/(f-n), (n*f)/(f-n),
+        0.0, 0.0, -n, 1.0
+    ));
 }
 
-mat4 gen_persp_matrix(float fov, float aspect, float near, float far) {
-    return mat4(
-        0.5,    0.0,     0.0,     0.0,
-        0.0,    1/tan(fov/2.0),     0.0,     0.0,
-        0.0,    0.0,    far/(far-near),    -near*(far-near),
-        0.0,  0.0,   1.0,     0.0
-    );
-}
+mat4 P = PerspectiveMatrix(-1, 1, -1, 1, 5, 0);
 
-mat4 X = mat4(
+mat4 V = transpose(mat4(
     1.0, 0.0, 0.0, 0.0,
     0.0, 1.0, 0.0, 0.0,
     0.0, 0.0, 1.0, 0.0,
     0.0, 0.0, 0.0, 1.0
-);
-
-mat4 look_at(vec3 eye, vec3 at, vec3 up) {
-  vec3 zaxis = normalize(at - eye);    
-  vec3 xaxis = normalize(cross(zaxis, up));
-  vec3 yaxis = cross(xaxis, zaxis);
-
-  zaxis = -1 * zaxis;
-
-  mat4 viewMatrix = {
-    vec4(xaxis.x, xaxis.y, xaxis.z, -dot(xaxis, eye)),
-    vec4(yaxis.x, yaxis.y, yaxis.z, -dot(yaxis, eye)),
-    vec4(zaxis.x, zaxis.y, zaxis.z, -dot(zaxis, eye)),
-    vec4(0, 0, 0, 1)
-  };
-
-  return viewMatrix;
-}
-
-mat4 gen_view_matrix() {
-    // the lookAt function requires three parameters:
-    //  an eyepos - this is a vec3 variable where the camera is in world coords.
-    // a target - this is the point your camera is looking at.
-    // an Up vector - this specifies the direction for the top of your camera
-
-    vec3 eyepos = vec3(0.0, 0.4, 1.0);   // camera slight above the origin.
-    vec3 target = vec3(0.0, 0.4, -1.0);  // Camera looking straight down Z axis
-    vec3 up = vec3(0.0, 1.0, 0.0); // the UP vector for the camera is simply straight up.
-
-    return mat4(
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0
-    );
-    
-    // return look_at(eyepos, target, up);
-}
+));
 
 layout (location = 0) out vec4 curr_color;
 layout (location = 1) out vec4 next_color;
@@ -93,9 +48,7 @@ void main() {
     mat4 curr_anim_offset = (anim_percentage * end_anim_offset);
     mat4 M = anim.start_transform + curr_anim_offset;
 
-    mat4 V = gen_view_matrix();
-    mat4 P = gen_persp_matrix(100.0 / 57.2958, 1000.0/1000.0, 1.0, -1.0);
-    gl_Position = P * V * M * pos;
+    gl_Position = P * V * M * vec4(pos, 1.0);
 
     // Calculate color of vertex, in animation based on time
     float color_transform = mod(pcs.time, 3000.0);
