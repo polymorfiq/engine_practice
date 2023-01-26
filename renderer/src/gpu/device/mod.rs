@@ -167,6 +167,15 @@ impl Device {
         }
     }
 
+    pub fn physical_device_properties(&self) -> vk::PhysicalDeviceProperties {
+        let instance = self.instance_id.instance();
+
+        unsafe {
+            instance.instance
+                .get_physical_device_properties(self.pdevice)
+        }
+    }
+
 
     pub fn cleanup(&self) {
         unsafe {

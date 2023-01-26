@@ -13,3 +13,5 @@ raw-window-handle = "0.5.0"
 shaderc = "0.8.1"
 
 linalg = { path = "../linalg" }
+world = { path = "../world" }
+models = { path = "../models" }

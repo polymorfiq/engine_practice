@@ -2,44 +2,51 @@ use super::DeviceProperties;
 use ash::vk;
 use std::marker::PhantomData;
 
-pub struct Buffer<T, const N: usize> {
-    memory_properties: vk::PhysicalDeviceMemoryProperties,
+pub struct Buffer<T> {
+    pub stages: vk::ShaderStageFlags,
+    device_props: DeviceProperties,
     sharing_mode: vk::SharingMode,
     memory_flags: vk::MemoryPropertyFlags,
     usage: vk::BufferUsageFlags,
-    pub binding: u32,
-    stride: u32,
-    input_rate: vk::VertexInputRate,
+    pub descriptor_type: vk::DescriptorType,
+    pub binding: Option<u32>,
     attributes: Vec<vk::VertexInputAttributeDescription>,
     pub buffer: Option<vk::Buffer>,
     device_memory: Option<vk::DeviceMemory>,
-    memory_req: Option<vk::MemoryRequirements>,
+    pub memory_req: Option<vk::MemoryRequirements>,
+    pub entries: usize,
     phantom: PhantomData<T>
 }
 
-impl<T: Copy, const N: usize> Buffer<T, N> {
+impl<T: Copy> Buffer<T> {
     pub fn new(device_props: &DeviceProperties) -> Self {
-        let memory_properties = device_props.physical_memory;
-
         Self {
-            memory_properties,
+            stages: vk::ShaderStageFlags::empty(),
+            device_props: *device_props,
             sharing_mode: vk::SharingMode::EXCLUSIVE,
             memory_flags: vk::MemoryPropertyFlags::DEVICE_LOCAL,
             usage: vk::BufferUsageFlags::UNIFORM_BUFFER,
-            binding: 0,
-            stride: std::mem::size_of::<T>() as u32,
-            input_rate: vk::VertexInputRate::VERTEX,
+            descriptor_type: vk::DescriptorType::UNIFORM_BUFFER,
+            binding: None,
             attributes: vec![],
             buffer: None,
             device_memory: None,
             memory_req: None,
+            entries: 0,
             phantom: PhantomData
+        }
+    }
+
+    pub fn stages(self, stages: vk::ShaderStageFlags) -> Self {
+        Self {
+            stages,
+            ..self
         }
     }
 
     pub fn binding(self, binding: u32) -> Self {
         Self {
-            binding,
+            binding: Some(binding),
             ..self
         }
     }
@@ -47,6 +54,13 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
     pub fn usage(self, usage: vk::BufferUsageFlags) -> Self {
         Self {
             usage,
+            ..self
+        }
+    }
+
+    pub fn descriptor_type(self, descriptor_type: vk::DescriptorType) -> Self {
+        Self {
+            descriptor_type,
             ..self
         }
     }
@@ -65,17 +79,10 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
         }
     }
 
-    pub fn input_rate(self, rate: vk::VertexInputRate) -> Self {
-        Self {
-            input_rate: rate,
-            ..self
-        }
-    }
-
-    pub fn attribute(self, location: u32, offset: u32, format: vk::Format) -> Self {
+    pub fn vertex_input_attribute(self, location: u32, binding: u32, offset: u32, format: vk::Format) -> Self {
         let desc = vk::VertexInputAttributeDescription {
             location,
-            binding: self.binding,
+            binding,
             format,
             offset,
         };
@@ -89,37 +96,31 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
         }
     }
 
-    pub fn info(&self) -> vk::BufferCreateInfo {
+    pub fn info(&self, data: &[T]) -> vk::BufferCreateInfo {
+        let size = self.entry_size() * data.len() as u64;
+
         vk::BufferCreateInfo {
-            size: (N as u64) * std::mem::size_of::<T>() as u64,
+            size,
             usage: self.usage,
             sharing_mode: self.sharing_mode,
             ..Default::default()
         }
     }
 
-    pub fn description(&self) -> vk::VertexInputBindingDescription {
-        vk::VertexInputBindingDescription {
-            binding: self.binding,
-            stride: self.stride,
-            input_rate: self.input_rate,
-        }
-    }
+    pub fn entry_size(&self) -> u64 {
+        let type_size = std::mem::size_of::<T>() as u64;
+        let min_dynamic_size = self.device_props.physical_props.limits.min_uniform_buffer_offset_alignment;
+        let entry_size = type_size.max(min_dynamic_size);
 
-    pub fn descriptor_info(&self) -> vk::DescriptorBufferInfo {
-        vk::DescriptorBufferInfo {
-            buffer: self.buffer.unwrap(),
-            offset: 0,
-            range: std::mem::size_of::<T>() as u64
-        }
+        entry_size
     }
 
     pub fn attributes(&self) -> &[vk::VertexInputAttributeDescription] {
         self.attributes.as_slice()
     }
 
-    pub fn allocate(self, dvc: &ash::Device) -> Self {
-        let buffer_info = self.info();
+    pub fn allocate(self, dvc: &ash::Device, data: &[T]) -> Self {
+        let buffer_info = self.info(data);
 
         if self.buffer.is_some() {
             return self;
@@ -133,15 +134,16 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
             let memory_req = dvc
                 .get_buffer_memory_requirements(buffer);
 
+            let memory_size = memory_req.size;
             let memory_index = find_memorytype_index(
                 &memory_req,
-                &self.memory_properties,
+                &self.device_props.physical_memory,
                 self.memory_flags
             )
                 .expect("Unable to find suitable memorytype for the buffer.");
 
             let allocate_info = vk::MemoryAllocateInfo {
-                allocation_size: memory_req.size,
+                allocation_size: memory_size,
                 memory_type_index: memory_index,
                 ..Default::default()
             };
@@ -159,24 +161,41 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
                 buffer: Some(buffer),
                 device_memory: Some(memory),
                 memory_req: Some(memory_req),
+                entries: data.len(),
                 ..self
             }
         }
     }
 
+    pub fn align_buffer(&self) -> u64 {
+        use std::mem::align_of;
+        use std::cmp::max;
+        let mut align = align_of::<T>() as u64;
+        if self.usage.intersects(vk::BufferUsageFlags::UNIFORM_BUFFER) {
+            align = max(align, self.device_props.physical_props.limits.min_uniform_buffer_offset_alignment);
+        }
+        if self.usage.intersects(vk::BufferUsageFlags::STORAGE_BUFFER) {
+            align = max(align, self.device_props.physical_props.limits.min_storage_buffer_offset_alignment);
+        }
+        if self.usage.intersects(vk::BufferUsageFlags::UNIFORM_TEXEL_BUFFER) {
+            align = max(align, self.device_props.physical_props.limits.min_texel_buffer_offset_alignment);
+        }
+        align
+    }
+
     pub fn copy(&self, dvc: &ash::Device, data: &[T]) {
         let memory = self.device_memory.expect("copy() called before allocate()");
-        let memory_req = self.memory_req.unwrap();
+        let alignment = self.align_buffer();
 
         unsafe {
             let buffer_ptr = dvc
-                .map_memory(memory, 0, memory_req.size, vk::MemoryMapFlags::empty())
+                .map_memory(memory, 0, self.memory_req.unwrap().size, vk::MemoryMapFlags::empty())
                 .expect("Error mapping buffer memory");
 
             let mut buffer_align = ash::util::Align::new(
                 buffer_ptr,
-                std::mem::align_of::<T>() as u64,
-                memory_req.size,
+                alignment,
+                self.memory_req.unwrap().size,
             );
 
             buffer_align.copy_from_slice(data);
@@ -185,13 +204,13 @@ impl<T: Copy, const N: usize> Buffer<T, N> {
     }
 
     pub fn load(self, dvc: &ash::Device, data: &[T]) -> Self {
-        let resp = self.allocate(dvc);
+        let resp = self.allocate(dvc, data);
         resp.copy(dvc, data);
         resp
     }
 }
 
-impl<T, const N: usize> super::Cleanup for Buffer<T, N> {
+impl<T> super::Cleanup for Buffer<T> {
     fn cleanup(&self, engine: &crate::Engine) {
         let device = engine.device_id.device();
 

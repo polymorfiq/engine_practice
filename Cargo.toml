@@ -5,4 +5,6 @@ members = [
     "physics",
     "game",
     "renderer",
+    "models",
+    "world",
 ]
