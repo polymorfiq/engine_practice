@@ -59,7 +59,7 @@ impl ModelMatrix {
     }
 
     pub fn matrix(&self) -> Matrix<f32, 4, 4> {
-        self.translation_matrix() * self.scale_matrix() * self.rotation_matrix()
+        self.translation_matrix() * self.rotation_matrix() * self.scale_matrix()
     }
 }
 

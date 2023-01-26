@@ -24,9 +24,9 @@ use engines::basic::Engine;
 
 use winit::event::VirtualKeyCode;
 
-const MOVE_SPEED: f32 = 0.5;
+const MOVE_SPEED: f32 = 0.1;
 const ROT_SPEED: f32 = 0.3;
-const Z_SPEED: f32 = 0.5;
+const Z_SPEED: f32 = 0.05;
 
 pub struct ModelGroup<'a> {
     models: Vec<Model<'a>>,
@@ -179,10 +179,24 @@ fn main() {
     //
     let models = ModelGroup::new()
         .load(models::d2::Triangle::new().into())
+        .load(models::d2::Rectangle::new().into())
         .load(models::d2::Rectangle::new().into());
 
     let models_ref = RefCell::new(models);
     models_ref.borrow_mut().set_material(1, Material{id: 2});
+    models_ref.borrow_mut().set_material(2, Material{id: 3});
+
+    models_ref.borrow_mut().set_model_matrix(0, ModelMatrix {
+        scale: (1.0, 1.0, 1.0), rotation: (0.0, 0.0, 0.0), translation: (0.8, 0.8, -2.0)
+    });
+
+    models_ref.borrow_mut().set_model_matrix(1, ModelMatrix {
+        scale: (1.0, 1.0, 1.0), rotation: (0.0, 0.0, 0.0), translation: (-1.0, -1.5, -2.3)
+    });
+
+    models_ref.borrow_mut().set_model_matrix(2, ModelMatrix {
+        scale: (1.0, 1.0, 1.0), rotation: (0.0, 0.0, 0.0), translation: (0.0, 0.0, -2.5)
+    });
 
     let transformations_need_copied = RefCell::new(false);
     let transformation_buffer: Buffer<Transformation> = Buffer::new(&device_props)
