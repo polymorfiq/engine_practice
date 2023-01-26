@@ -6,7 +6,7 @@ extern crate winit;
 
 use ash::vk;
 use std::{cell::RefCell, ffi::CString};
-use models::{Model, Vertex};
+use models::{Renderable, Vertex, Modelable};
 use world::ModelMatrix;
 
 #[macro_use]
@@ -25,11 +25,11 @@ use engines::basic::Engine;
 use winit::event::VirtualKeyCode;
 
 const MOVE_SPEED: f32 = 0.1;
-const ROT_SPEED: f32 = 0.3;
+const ROT_SPEED: f32 = 15.0;
 const Z_SPEED: f32 = 0.05;
 
 pub struct ModelGroup<'a> {
-    models: Vec<&'a dyn Model>,
+    models: Vec<&'a dyn Renderable>,
     model_matrices: Vec<ModelMatrix>,
     vertices: Vec<Vertex>,
     indices: Vec<u32>,
@@ -49,7 +49,7 @@ impl<'a> ModelGroup<'a> {
         }
     }
 
-    pub fn load(self, model: &'a dyn Model) -> Self {
+    pub fn load(self, model: &'a dyn Renderable) -> Self {
         let mut models = self.models.clone();
         models.push(model);
 
@@ -177,14 +177,14 @@ fn main() {
     //
     // Setup Shader Inputs
     //
-    let triangle1 = models::d2::Triangle::new([0.0, 0.0, 0.0]);
-    let rectangle1 = models::d2::Rectangle::new([0.0, 0.0, 0.0]);
-    let rectangle2 = models::d2::Rectangle::new([0.0, 0.0, 0.0]);
+    let triangle1 = models::d2::Triangle::new().model();
+    let rectangle1 = models::d2::Rectangle::new().model();
+    let cube1 = models::d3::Cube::new().model();
 
     let models = ModelGroup::new()
         .load(&triangle1)
-        .load(&rectangle1)
-        .load(&rectangle2);
+        .load(&cube1)
+        .load(&rectangle1);
 
     let models_ref = RefCell::new(models);
     models_ref.borrow_mut().set_material(1, Material{id: 2});
@@ -195,7 +195,7 @@ fn main() {
     });
 
     models_ref.borrow_mut().set_model_matrix(1, ModelMatrix {
-        scale: (1.0, 1.0, 1.0), rotation: (0.0, 0.0, 0.0), translation: (-1.0, -1.5, -2.3)
+        scale: (0.1, 0.1, 0.1), rotation: (0.0, 0.0, 0.0), translation: (-1.0, -1.5, -2.3)
     });
 
     models_ref.borrow_mut().set_model_matrix(2, ModelMatrix {

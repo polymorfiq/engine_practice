@@ -1,4 +1,4 @@
-use crate::{Model, Vertex, Vector};
+use crate::{Model, Modelable, Vertex, Vector};
 
 pub struct Rectangle {
     vertices: [Vertex; 4],
@@ -6,14 +6,14 @@ pub struct Rectangle {
 }
 
 impl Rectangle {
-    pub fn new(normal: [f32; 3]) -> Self {
-        let vertices = [
-            Vertex {pos: Vector::vector([-0.5, -0.5, 0.0]), normal: Vector::vector(normal)},
-            Vertex {pos: Vector::vector([-0.5, 0.5, 0.0]), normal: Vector::vector(normal)},
-            Vertex {pos: Vector::vector([0.5, -0.5, 0.0]), normal: Vector::vector(normal)},
-            Vertex {pos: Vector::vector([0.5, 0.5, 0.0]), normal: Vector::vector(normal)},
-        ];
+    pub fn new() -> Self {
+        let normal = [0.0, 0.0, -1.0];
+        let t_left = Vertex {pos: Vector::vector([-0.5, -0.5, 0.0]), normal: Vector::vector(normal)};
+        let t_right = Vertex {pos: Vector::vector([-0.5, 0.5, 0.0]), normal: Vector::vector(normal)};
+        let b_left = Vertex {pos: Vector::vector([0.5, -0.5, 0.0]), normal: Vector::vector(normal)};
+        let b_right = Vertex {pos: Vector::vector([0.5, 0.5, 0.0]), normal: Vector::vector(normal)};
 
+        let vertices = [t_left, t_right, b_left, b_right];
         let indices = [0, 1, 2, 1, 2, 3];
 
         Self {
@@ -23,12 +23,11 @@ impl Rectangle {
     }
 }
 
-impl Model for Rectangle {
-    fn vertices(&self) -> &[Vertex] {
-        &self.vertices
-    }
-
-    fn indices(&self) ->  &[usize] {
-        &self.indices
+impl Modelable<4, 6> for Rectangle {
+    fn model(&self) -> Model<4, 6> {
+        Model {
+            vertices: self.vertices,
+            indices: self.indices
+        }
     }
 }

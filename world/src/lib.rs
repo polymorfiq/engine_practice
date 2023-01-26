@@ -33,6 +33,9 @@ impl ModelMatrix {
 
     fn rotation_matrix(&self) -> Matrix<f32, 4, 4> {
         let (r_x, r_y, r_z) = self.rotation;
+        let r_x = r_x.to_radians();
+        let r_y = r_y.to_radians();
+        let r_z = r_z.to_radians();
 
         let rot_x = Matrix::new([
             [1.0, 0.0, 0.0, 0.0],
