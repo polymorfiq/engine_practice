@@ -29,7 +29,7 @@ const ROT_SPEED: f32 = 0.3;
 const Z_SPEED: f32 = 0.05;
 
 pub struct ModelGroup<'a> {
-    models: Vec<Model<'a>>,
+    models: Vec<&'a dyn Model>,
     model_matrices: Vec<ModelMatrix>,
     vertices: Vec<Vertex>,
     indices: Vec<u32>,
@@ -49,7 +49,7 @@ impl<'a> ModelGroup<'a> {
         }
     }
 
-    pub fn load(self, model: Model<'a>) -> Self {
+    pub fn load(self, model: &'a dyn Model) -> Self {
         let mut models = self.models.clone();
         models.push(model);
 
@@ -58,12 +58,12 @@ impl<'a> ModelGroup<'a> {
 
         let mut vertices = vec![];
         for model in &models {
-            vertices.extend_from_slice(model.vertices);
+            vertices.extend_from_slice(model.vertices());
         }
 
         let mut indices = vec![];
         for model in &models {
-            for idx in model.indices {
+            for idx in model.indices() {
                 indices.push(*idx as u32);
             }
         }
@@ -177,10 +177,14 @@ fn main() {
     //
     // Setup Shader Inputs
     //
+    let triangle1 = models::d2::Triangle::new([0.0, 0.0, 0.0]);
+    let rectangle1 = models::d2::Rectangle::new([0.0, 0.0, 0.0]);
+    let rectangle2 = models::d2::Rectangle::new([0.0, 0.0, 0.0]);
+
     let models = ModelGroup::new()
-        .load(models::d2::Triangle::new().into())
-        .load(models::d2::Rectangle::new().into())
-        .load(models::d2::Rectangle::new().into());
+        .load(&triangle1)
+        .load(&rectangle1)
+        .load(&rectangle2);
 
     let models_ref = RefCell::new(models);
     models_ref.borrow_mut().set_material(1, Material{id: 2});
@@ -496,8 +500,8 @@ fn main() {
                 let mut curr_idx: usize = 0;
                 let mut curr_vtx: usize = 0;
                 for i in 0..models.models.len() {
-                    let indices = models.models[i].indices;
-                    let vertices = models.models[i].vertices;
+                    let indices = models.models[i].indices();
+                    let vertices = models.models[i].vertices();
 
                     dvc.cmd_bind_descriptor_sets(
                         command_buffer, 

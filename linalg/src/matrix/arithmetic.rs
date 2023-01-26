@@ -22,32 +22,6 @@ impl <T: Mobile, const M: usize, const N: usize> ops::Sub for Matrix<T, M, N>
     }
 }
 
-impl <T: Mobile, const M: usize, const N: usize> ops::Mul<T> for Matrix<T, M, N>
-    where T: ops::Mul<Output = T>
-{
-    type Output = Self;
-
-    fn mul(self, other: T) -> Self {
-        gen_matrix(|m, n| *self.value_at(m, n) * other)
-    }
-}
-
-impl <T: Mobile, const M: usize, const N: usize> ops::Mul<Self> for Matrix<T, M, N>
-    where T: ops::Mul<Output = T>
-{
-    type Output = Self;
-
-    fn mul(self, other: Self) -> Self {
-        gen_matrix(|m, n| {
-            let mut sum = T::zero();
-            for row in 0..other.rows() {
-                sum = sum + (*self.value_at(m, row) * *other.value_at(row, n));
-            }
-            sum
-        })
-    }
-}
-
 impl <T: Mobile, const M: usize, const N: usize> ops::Div<T> for Matrix<T, M, N>
     where T: ops::Div<Output = T>
 {

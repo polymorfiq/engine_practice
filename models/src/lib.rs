@@ -1,13 +1,16 @@
 #![no_std]
 pub mod d2;
+pub mod d3;
+
+pub use linalg::Vector;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Vertex {
-    pub pos: [f32; 3],
+    pub pos: Vector<f32, 3>,
+    pub normal: Vector<f32, 3>,
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct Model<'a> {
-    pub vertices: &'a [Vertex],
-    pub indices: &'a [usize],
+pub trait Model {
+    fn vertices(&self) -> &[Vertex];
+    fn indices(&self) -> &[usize];
 }

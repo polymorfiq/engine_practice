@@ -1,11 +1,11 @@
 use crate::{Model, Vertex, Vector};
 
-pub struct Rectangle {
+pub struct Cube {
     vertices: [Vertex; 4],
     indices: [usize; 6]
 }
 
-impl Rectangle {
+impl Cube {
     pub fn new(normal: [f32; 3]) -> Self {
         let vertices = [
             Vertex {pos: Vector::vector([-0.5, -0.5, 0.0]), normal: Vector::vector(normal)},
@@ -23,7 +23,7 @@ impl Rectangle {
     }
 }
 
-impl Model for Rectangle {
+impl Model for Cube {
     fn vertices(&self) -> &[Vertex] {
         &self.vertices
     }

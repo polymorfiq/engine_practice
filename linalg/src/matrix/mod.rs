@@ -11,14 +11,13 @@ use constructors::gen_matrix;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Matrix<T: Mobile, const M: usize, const N: usize> {
-    data: [[T; N]; M],
+    pub(crate) data: [[T; N]; M],
 }
 
 impl <T: Mobile, const M: usize, const N: usize> Matrix<T, M, N> {
     pub fn new(data: [[T; N]; M]) -> Self {
         Self { data: data }
     }
-
 
     pub fn row_major(&self) -> [[T; N]; M] { self.data }
     pub fn col_major(&self) -> [[T; M]; N] { self.transpose().data }

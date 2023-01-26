@@ -1,9 +1,9 @@
-use linalg::Matrix;
+use linalg::Vector;
 use crate::Space;
 use crate::space::{BaseUnit, ObservableSpace};
 
 #[derive(Copy, Clone)]
-pub struct Meters<const DIMENSIONS: usize, B: BaseUnit>(Matrix<B, 1, DIMENSIONS>);
+pub struct Meters<const DIMENSIONS: usize, B: BaseUnit>(Vector<B, DIMENSIONS>);
 
 impl<const D: usize, B: BaseUnit> Space for Meters<D, B> {
     const DIMENSIONS: usize = D;
@@ -12,7 +12,7 @@ impl<const D: usize, B: BaseUnit> Space for Meters<D, B> {
 
 impl<const D: usize, B: BaseUnit> ObservableSpace<D> for Meters<D, B> {
     fn new(p: &[B; D]) -> Self {
-        Self(Matrix::new([*p]))
+        Self(Vector::vector(*p))
     }
 
     fn components(&self) -> [Self; D] {
@@ -72,5 +72,5 @@ impl<const D: usize, B: BaseUnit> core::ops::Div for Meters<D, B> {
 
 impl<const D: usize, B: BaseUnit> core::ops::Mul for Meters<D, B> {
     type Output = Self;
-    fn mul(self, other: Self) -> Self::Output { Self(self.0 * other.0) }
+    fn mul(self, other: Self) -> Self::Output { Self(self.0.vec_multiply(other.0)) }
 }
