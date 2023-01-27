@@ -1,4 +1,4 @@
-#![no_std]
+// #![no_std]
 pub mod d2;
 pub mod d3;
 
@@ -9,6 +9,15 @@ use world::ModelMatrix;
 pub struct Vertex {
     pub pos: Vector<f32, 3>,
     pub normal: Vector<f32, 3>,
+}
+
+impl core::default::Default for Vertex {
+    fn default() -> Self {
+        Self {
+            pos: Vector::vector([0.0, 0.0, 0.0]),
+            normal: Vector::vector([0.0, 0.0, 0.0])
+        }
+    }
 }
 
 pub trait Modelable<const V: usize, const I: usize> {

@@ -1,10 +1,9 @@
-extern crate std;
 use crate::{Model, Modelable, Vertex, Transformable};
 use crate::d2::Rectangle;
 
 pub struct Cube {
     vertices: [Vertex; 24],
-    indices: [usize; 36]
+    indices: [usize; 42]
 }
 
 const RECT_V: usize = 4;
@@ -22,6 +21,7 @@ impl Cube {
             .translate(0.5, 0.0, 0.0);
 
         let front = Rectangle::new()
+            .rotate(0.0, 0.0, 0.0)
             .translate(0.0, 0.0, 0.5);
 
         let back = Rectangle::new()
@@ -36,25 +36,34 @@ impl Cube {
             .rotate(90.0, 0.0, 0.0)
             .translate(0.0, 0.5, 0.0);
 
-        let vertices: [Vertex; RECT_V*NUM_RECTS] = unsafe {
-            let mut result = std::mem::MaybeUninit::uninit();
-            let dest = result.as_mut_ptr() as *mut Vertex;
-            std::ptr::copy_nonoverlapping(left.vertices.as_ptr(), dest, RECT_V);
-            std::ptr::copy_nonoverlapping(right.vertices.as_ptr(), dest, RECT_V);
-            std::ptr::copy_nonoverlapping(top.vertices.as_ptr(), dest, RECT_V);
-            std::ptr::copy_nonoverlapping(bottom.vertices.as_ptr(), dest, RECT_V);
-            std::ptr::copy_nonoverlapping(front.vertices.as_ptr(), dest, RECT_V);
-            std::ptr::copy_nonoverlapping(back.vertices.as_ptr(), dest, RECT_V);
-            result.assume_init()
-        };
+        let models = [
+            left,
+            right,
+            front,
+            back,
+            bottom,
+            top
+        ];
 
-        let mut indices = [0; RECT_I*NUM_RECTS];
-        for i in 0..RECT_I { indices[i] = left.indices[i] }
-        for i in 0..RECT_I { indices[i + (RECT_I * 1)] = right.indices[i] + (RECT_V * 1) }
-        for i in 0..RECT_I { indices[i + (RECT_I * 2)] = top.indices[i] + (RECT_V * 2) }
-        for i in 0..RECT_I { indices[i + (RECT_I * 3)] = bottom.indices[i] + (RECT_V * 3) }
-        for i in 0..RECT_I { indices[i + (RECT_I * 4)] = front.indices[i] + (RECT_V * 4) }
-        for i in 0..RECT_I { indices[i + (RECT_I * 5)] = back.indices[i] + (RECT_V * 5) }
+        let mut i = 0;
+        let mut v = 0;
+        let mut indices = [0; (RECT_I*NUM_RECTS)+NUM_RECTS];
+        let mut vertices = [Default::default(); (RECT_V*NUM_RECTS)];
+        for model in models {
+            for idx in model.indices {
+                indices[i] = idx + v;
+                i += 1;
+            }
+
+            // Primitive Reset indicator
+            indices[i] = 0xFFFFFFFF;
+            i += 1;
+
+            for vtx in model.vertices {
+                vertices[v] = vtx;
+                v += 1;
+            }
+        }
 
         Self {
             vertices,
@@ -63,8 +72,8 @@ impl Cube {
     }
 }
 
-impl Modelable<24, 36> for Cube {
-    fn model(&self) -> Model<24, 36> {
+impl Modelable<24, 42> for Cube {
+    fn model(&self) -> Model<24, 42> {
         Model {
             vertices: self.vertices,
             indices: self.indices

@@ -52,13 +52,13 @@ impl ModelMatrix {
         ]);
 
         let rot_z = Matrix::new([
-            [r_z.cos(), r_z.sin(), 0.0, 0.0],
-            [-r_z.sin(), r_z.cos(), 0.0, 0.0],
+            [r_z.cos(), -r_z.sin(), 0.0, 0.0],
+            [r_z.sin(), r_z.cos(), 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ]);
 
-        rot_x + rot_y + rot_z
+        rot_z * rot_y * rot_x
     }
 
     pub fn matrix(&self) -> Matrix<f32, 4, 4> {

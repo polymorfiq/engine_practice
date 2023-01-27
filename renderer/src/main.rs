@@ -27,6 +27,7 @@ use winit::event::VirtualKeyCode;
 const MOVE_SPEED: f32 = 0.1;
 const ROT_SPEED: f32 = 15.0;
 const Z_SPEED: f32 = 0.05;
+const SCALE_SPEED: f32 = 0.2;
 
 pub struct ModelGroup<'a> {
     models: Vec<&'a dyn Renderable>,
@@ -195,7 +196,7 @@ fn main() {
     });
 
     models_ref.borrow_mut().set_model_matrix(1, ModelMatrix {
-        scale: (0.1, 0.1, 0.1), rotation: (0.0, 0.0, 0.0), translation: (-1.0, -1.5, -2.3)
+        scale: (1.0, 1.0, 1.0), rotation: (0.0, 0.0, 0.0), translation: (-1.0, -1.5, -2.3)
     });
 
     models_ref.borrow_mut().set_model_matrix(2, ModelMatrix {
@@ -349,22 +350,41 @@ fn main() {
     // Render Loop
     //
     let mut shift_pressed = false;
+    let mut cmd_pressed = false;
     let mut transform_selected = 0;
     let handle_event = |_: &ash::Device, event: winit::event::Event<()>, _curr_time: std::time::SystemTime| {
         match event {
             key_pressed!(VirtualKeyCode::LShift) => shift_pressed = true,
             key_released!(VirtualKeyCode::LShift) => shift_pressed = false,
+            key_pressed!(VirtualKeyCode::LWin) => cmd_pressed = true,
+            key_released!(VirtualKeyCode::LWin) => cmd_pressed = false,
             key_pressed!(VirtualKeyCode::Key1) => transform_selected = 0,
             key_pressed!(VirtualKeyCode::Key2) => transform_selected = 1,
 
             key_pressed!(VirtualKeyCode::W) | key_pressed!(VirtualKeyCode::A) | key_pressed!(VirtualKeyCode::S) | key_pressed!(VirtualKeyCode::D) => {
                 let mut translation_change = (0.0, 0.0, 0.0);
-                let scale_change = (0.0, 0.0, 0.0);
+                let mut scale_change = (0.0, 0.0, 0.0);
                 let mut rot_change = (0.0, 0.0, 0.0);
 
                 match event {
-                    key_pressed!(VirtualKeyCode::W) if shift_pressed => {
+                    key_pressed!(VirtualKeyCode::W) if cmd_pressed => {
+                        translation_change = (0.0, 0.0, -Z_SPEED);
+                    }
+                    
+                    key_pressed!(VirtualKeyCode::A) if cmd_pressed => {
+                        scale_change = (-SCALE_SPEED, -SCALE_SPEED, -SCALE_SPEED);
+                    }
+
+                    key_pressed!(VirtualKeyCode::S) if cmd_pressed => {
                         translation_change = (0.0, 0.0, Z_SPEED);
+                    }
+
+                    key_pressed!(VirtualKeyCode::D) if cmd_pressed => {
+                        scale_change = (SCALE_SPEED, SCALE_SPEED, SCALE_SPEED);
+                    }
+                    
+                    key_pressed!(VirtualKeyCode::W) if shift_pressed => {
+                        rot_change = (ROT_SPEED, 0.0, 0.0);
                     }
                     
                     key_pressed!(VirtualKeyCode::A) if shift_pressed => {
@@ -372,26 +392,26 @@ fn main() {
                     }
 
                     key_pressed!(VirtualKeyCode::S) if shift_pressed => {
-                        translation_change = (0.0, 0.0, -Z_SPEED);
+                        rot_change = (-ROT_SPEED, 0.0, 0.0);
                     }
 
                     key_pressed!(VirtualKeyCode::D) if shift_pressed => {
                         rot_change = (0.0, ROT_SPEED, 0.0);
                     }
 
-                    key_pressed!(VirtualKeyCode::W) if !shift_pressed => {
+                    key_pressed!(VirtualKeyCode::W) => {
                         translation_change = (0.0, -MOVE_SPEED, 0.0);
                     }
                     
-                    key_pressed!(VirtualKeyCode::A) if !shift_pressed => {
+                    key_pressed!(VirtualKeyCode::A) => {
                         translation_change = (-MOVE_SPEED, 0.0, 0.0);
                     }
 
-                    key_pressed!(VirtualKeyCode::S) if !shift_pressed => {
+                    key_pressed!(VirtualKeyCode::S) => {
                         translation_change = (0.0, MOVE_SPEED, 0.0);
                     }
 
-                    key_pressed!(VirtualKeyCode::D) if !shift_pressed => {
+                    key_pressed!(VirtualKeyCode::D) => {
                         translation_change = (MOVE_SPEED, 0.0, 0.0);
                     },
 
@@ -587,7 +607,8 @@ fn main() {
 
 fn get_vertex_input_assembly_state_info() -> vk::PipelineInputAssemblyStateCreateInfo {
     vk::PipelineInputAssemblyStateCreateInfo {
-        topology: vk::PrimitiveTopology::TRIANGLE_LIST,
+        topology: vk::PrimitiveTopology::TRIANGLE_STRIP,
+        primitive_restart_enable: vk::TRUE,
         ..Default::default()
     }
 }
