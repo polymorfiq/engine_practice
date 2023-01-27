@@ -3,7 +3,7 @@ use crate::d2::Rectangle;
 
 pub struct Cube {
     vertices: [Vertex; 24],
-    indices: [usize; 42]
+    indices: [usize; 36]
 }
 
 const RECT_V: usize = 4;
@@ -47,17 +47,13 @@ impl Cube {
 
         let mut i = 0;
         let mut v = 0;
-        let mut indices = [0; (RECT_I*NUM_RECTS)+NUM_RECTS];
+        let mut indices = [0; (RECT_I*NUM_RECTS)];
         let mut vertices = [Default::default(); (RECT_V*NUM_RECTS)];
         for model in models {
             for idx in model.indices {
                 indices[i] = idx + v;
                 i += 1;
             }
-
-            // Primitive Reset indicator
-            indices[i] = 0xFFFFFFFF;
-            i += 1;
 
             for vtx in model.vertices {
                 vertices[v] = vtx;
@@ -72,8 +68,8 @@ impl Cube {
     }
 }
 
-impl Modelable<24, 42> for Cube {
-    fn model(&self) -> Model<24, 42> {
+impl Modelable<24, 36> for Cube {
+    fn model(&self) -> Model<24, 36> {
         Model {
             vertices: self.vertices,
             indices: self.indices
